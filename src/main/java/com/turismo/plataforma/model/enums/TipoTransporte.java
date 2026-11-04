@@ -1,4 +1,4 @@
 package com.turismo.plataforma.model.enums;
 
-public class TIpoTransporte {
+public class TipoTransporte {
 }
