@@ -1,4 +1,3 @@
 package com.turismo.plataforma.model.enums;
 
-public class EstadoReserva {
-}
+public enum EstadoReserva { PENDIENTE, CONFIRMADA, CANCELADA }

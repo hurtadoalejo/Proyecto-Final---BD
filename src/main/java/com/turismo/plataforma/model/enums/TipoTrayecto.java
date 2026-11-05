@@ -1,4 +1,3 @@
 package com.turismo.plataforma.model.enums;
 
-public class TipoTrayecto {
-}
+public enum TipoTrayecto { IDA, VUELTA }

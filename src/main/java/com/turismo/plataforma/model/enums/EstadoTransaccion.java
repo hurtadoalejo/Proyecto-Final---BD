@@ -1,4 +1,3 @@
 package com.turismo.plataforma.model.enums;
 
-public class EstadoTransaccion {
-}
+public enum EstadoTransaccion { PENDIENTE, APROBADA, RECHAZADA }
