@@ -15,7 +15,6 @@ import java.util.List;
 @Getter @Setter @NoArgsConstructor
 public class Cliente extends Usuario {
 
-    /** Cliente (1) TIENE Notificacion (N) */
     @OneToMany(mappedBy = "cliente")
     private List<Notificacion> notificaciones = new ArrayList<>();
 }
