@@ -1,15 +1,21 @@
 package com.turismo.plataforma.model;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.PrimaryKeyJoinColumn;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+
+import java.util.ArrayList;
+import java.util.List;
+
 
 @Entity
 @Table(name = "cliente")
 @PrimaryKeyJoinColumn(name = "id_usuario")
 @Getter @Setter @NoArgsConstructor
 public class Cliente extends Usuario {
+
+    /** Cliente (1) TIENE Notificacion (N) */
+    @OneToMany(mappedBy = "cliente")
+    private List<Notificacion> notificaciones = new ArrayList<>();
 }
