@@ -1,4 +1,3 @@
 package com.turismo.plataforma.model.enums;
 
-public class Rol {
-}
+public enum Rol { EMPLEADO, CLIENTE }

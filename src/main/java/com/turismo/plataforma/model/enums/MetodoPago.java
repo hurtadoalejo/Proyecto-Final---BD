@@ -1,4 +1,3 @@
 package com.turismo.plataforma.model.enums;
 
-public class MetodoPago {
-}
+public enum MetodoPago { TARJETA_CREDITO, TARJETA_DEBITO, PSE }

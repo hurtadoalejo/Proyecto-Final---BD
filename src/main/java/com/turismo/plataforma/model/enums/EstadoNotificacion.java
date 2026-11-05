@@ -1,4 +1,3 @@
 package com.turismo.plataforma.model.enums;
 
-public class EstadoNotificacion {
-}
+public enum EstadoNotificacion {ENVIADO, FALLIDO, PENDIENTE }
