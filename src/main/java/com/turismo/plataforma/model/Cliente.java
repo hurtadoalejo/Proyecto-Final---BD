@@ -17,4 +17,7 @@ public class Cliente extends Usuario {
 
     @OneToMany(mappedBy = "cliente")
     private List<Notificacion> notificaciones = new ArrayList<>();
+
+    @OneToMany(mappedBy = "cliente")
+    private List<Reserva> reservas = new ArrayList<>();
 }
