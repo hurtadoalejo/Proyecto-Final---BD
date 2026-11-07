@@ -21,4 +21,9 @@ public class VehiculoController {
     public List<VehiculoResponse> listar() {
         return vehiculoService.listar();
     }
+
+    @GetMapping("/{id}")
+    public VehiculoResponse obtener(@PathVariable("id") Long id) {
+        return vehiculoService.obtener(id);
+    }
 }
