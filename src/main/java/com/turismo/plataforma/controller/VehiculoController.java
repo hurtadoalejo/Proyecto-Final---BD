@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.*;
 import java.net.URI;
 import java.util.List;
 
-/** Endpoints REST de vehiculos. */
 @RestController
 @RequestMapping("/api/vehiculos")
 public class VehiculoController {
@@ -35,5 +34,11 @@ public class VehiculoController {
     public ResponseEntity<VehiculoResponse> crear(@Valid @RequestBody VehiculoRequest request) {
         VehiculoResponse creado = vehiculoService.crear(request);
         return ResponseEntity.created(URI.create("/api/vehiculos/" + creado.idVehiculo())).body(creado);
+    }
+
+    @PutMapping("/{id}")
+    public VehiculoResponse actualizar(@PathVariable("id") Long id,
+                                       @Valid @RequestBody VehiculoRequest request) {
+        return vehiculoService.actualizar(id, request);
     }
 }

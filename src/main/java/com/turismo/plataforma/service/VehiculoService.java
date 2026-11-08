@@ -45,6 +45,17 @@ public class VehiculoService {
         return VehiculoResponse.from(vehiculoRepository.save(vehiculo));
     }
 
+    @Transactional
+    public VehiculoResponse actualizar(Long id, VehiculoRequest request) {
+        Vehiculo vehiculo = buscarEntidad(id);
+        String codigo = normalizarCodigo(request.codigoIdentificacion());
+        if (vehiculoRepository.existsByCodigoIdentificacionAndIdVehiculoNot(codigo, id)) {
+            throw new ConflictoException("Ya existe otro vehículo con el código " + codigo);
+        }
+        aplicarDatos(vehiculo, request, codigo);
+        return VehiculoResponse.from(vehiculo);
+    }
+
     private Vehiculo buscarEntidad(Long id) {
         return vehiculoRepository.findById(id)
                 .orElseThrow(() -> new RecursoNoEncontradoException("No existe el vehículo con id " + id));
