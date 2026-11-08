@@ -1,6 +1,8 @@
 package com.turismo.plataforma.service;
 
+import com.turismo.plataforma.dto.vehiculo.VehiculoRequest;
 import com.turismo.plataforma.dto.vehiculo.VehiculoResponse;
+import com.turismo.plataforma.exception.ConflictoException;
 import com.turismo.plataforma.exception.RecursoNoEncontradoException;
 import com.turismo.plataforma.model.Vehiculo;
 import com.turismo.plataforma.repository.VehiculoRepository;
@@ -20,20 +22,41 @@ public class VehiculoService {
         this.vehiculoRepository = vehiculoRepository;
     }
 
-    /** Consulta: todos los vehículos ordenados */
+    /** todos los vehiculo ordenados */
     public List<VehiculoResponse> listar() {
         return vehiculoRepository.findAll(Sort.by("codigoIdentificacion")).stream()
                 .map(VehiculoResponse::from)
                 .toList();
     }
 
-    /** Consulta: un vehículo por su id */
+    /** vehiculo por su id */
     public VehiculoResponse obtener(Long id) {
         return VehiculoResponse.from(buscarEntidad(id));
+    }
+
+    @Transactional
+    public VehiculoResponse crear(VehiculoRequest request) {
+        String codigo = normalizarCodigo(request.codigoIdentificacion());
+        if (vehiculoRepository.existsByCodigoIdentificacion(codigo)) {
+            throw new ConflictoException("Ya existe un vehículo con el código " + codigo);
+        }
+        Vehiculo vehiculo = new Vehiculo();
+        aplicarDatos(vehiculo, request, codigo);
+        return VehiculoResponse.from(vehiculoRepository.save(vehiculo));
     }
 
     private Vehiculo buscarEntidad(Long id) {
         return vehiculoRepository.findById(id)
                 .orElseThrow(() -> new RecursoNoEncontradoException("No existe el vehículo con id " + id));
+    }
+
+    private void aplicarDatos(Vehiculo vehiculo, VehiculoRequest request, String codigo) {
+        vehiculo.setCodigoIdentificacion(codigo);
+        vehiculo.setTipoTransporte(request.tipoTransporte());
+        vehiculo.setCapacidad(request.capacidad());
+    }
+
+    private String normalizarCodigo(String codigo) {
+        return codigo.trim().toUpperCase();
     }
 }

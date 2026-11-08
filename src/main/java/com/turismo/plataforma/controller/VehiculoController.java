@@ -1,12 +1,16 @@
 package com.turismo.plataforma.controller;
 
+import com.turismo.plataforma.dto.vehiculo.VehiculoRequest;
 import com.turismo.plataforma.dto.vehiculo.VehiculoResponse;
 import com.turismo.plataforma.service.VehiculoService;
+import jakarta.validation.Valid;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.net.URI;
 import java.util.List;
 
-/** Endpoints REST de vehículos. --> JSON */
+/** Endpoints REST de vehiculos. */
 @RestController
 @RequestMapping("/api/vehiculos")
 public class VehiculoController {
@@ -25,5 +29,11 @@ public class VehiculoController {
     @GetMapping("/{id}")
     public VehiculoResponse obtener(@PathVariable("id") Long id) {
         return vehiculoService.obtener(id);
+    }
+
+    @PostMapping
+    public ResponseEntity<VehiculoResponse> crear(@Valid @RequestBody VehiculoRequest request) {
+        VehiculoResponse creado = vehiculoService.crear(request);
+        return ResponseEntity.created(URI.create("/api/vehiculos/" + creado.idVehiculo())).body(creado);
     }
 }
