@@ -41,4 +41,10 @@ public class VehiculoController {
                                        @Valid @RequestBody VehiculoRequest request) {
         return vehiculoService.actualizar(id, request);
     }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> eliminar(@PathVariable("id") Long id) {
+        vehiculoService.eliminar(id);
+        return ResponseEntity.noContent().build();
+    }
 }

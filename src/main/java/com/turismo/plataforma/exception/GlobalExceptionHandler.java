@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import org.springframework.dao.DataIntegrityViolationException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -37,6 +38,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ConflictoException.class)
     public ProblemDetail conflicto(ConflictoException ex) {
         return problema(HttpStatus.CONFLICT, "Conflicto", ex.getMessage());
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ProblemDetail integridad() {
+        return problema(HttpStatus.CONFLICT, "Restricción de base de datos",
+                "No se puede completar: el registro está relacionado con otros datos o está duplicado.");
     }
 
     private ProblemDetail problema(HttpStatus status, String titulo, String detalle) {

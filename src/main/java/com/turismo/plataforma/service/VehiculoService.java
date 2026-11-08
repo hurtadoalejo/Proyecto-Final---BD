@@ -56,6 +56,13 @@ public class VehiculoService {
         return VehiculoResponse.from(vehiculo);
     }
 
+    @Transactional
+    public void eliminar(Long id) {
+        Vehiculo vehiculo = buscarEntidad(id);
+        vehiculoRepository.delete(vehiculo);
+        vehiculoRepository.flush();
+    }
+
     private Vehiculo buscarEntidad(Long id) {
         return vehiculoRepository.findById(id)
                 .orElseThrow(() -> new RecursoNoEncontradoException("No existe el vehículo con id " + id));
