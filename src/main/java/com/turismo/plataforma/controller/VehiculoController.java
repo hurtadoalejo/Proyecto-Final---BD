@@ -20,9 +20,10 @@ public class VehiculoController {
         this.vehiculoService = vehiculoService;
     }
 
+
     @GetMapping
-    public List<VehiculoResponse> listar() {
-        return vehiculoService.listar();
+    public List<VehiculoResponse> listar(@RequestParam(name = "q", required = false) String q) {
+        return vehiculoService.listar(q);
     }
 
     @GetMapping("/{id}")

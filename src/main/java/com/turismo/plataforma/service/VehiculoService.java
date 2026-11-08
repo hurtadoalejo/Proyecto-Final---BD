@@ -22,9 +22,12 @@ public class VehiculoService {
         this.vehiculoRepository = vehiculoRepository;
     }
 
-    /** todos los vehiculo ordenados */
-    public List<VehiculoResponse> listar() {
-        return vehiculoRepository.findAll(Sort.by("codigoIdentificacion")).stream()
+    /** Consulta: vehículos cuyo código contiene el texto (todos si viene vacío). */
+    public List<VehiculoResponse> listar(String texto) {
+        String filtro = texto == null ? "" : texto.trim();
+        return vehiculoRepository
+                .findByCodigoIdentificacionContainingIgnoreCaseOrderByCodigoIdentificacion(filtro)
+                .stream()
                 .map(VehiculoResponse::from)
                 .toList();
     }
