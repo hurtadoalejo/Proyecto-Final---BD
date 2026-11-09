@@ -1,5 +1,6 @@
 package com.turismo.plataforma.repository;
 import java.time.LocalDateTime;
+import com.turismo.plataforma.model.enums.EstadoReserva;
 
 import com.turismo.plataforma.model.ProgramacionViaje;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -31,4 +32,15 @@ public interface ProgramacionViajeRepository extends JpaRepository<ProgramacionV
 
     boolean existsByVehiculoIdVehiculoAndFechaHoraSalidaAndIdProgramacionNot(
             Long idVehiculo, LocalDateTime fechaHoraSalida, Long idProgramacion);
+
+    /** Pasajeros ya reservados en una programación, sin contar reservas canceladas. */
+    @Query("""
+           select count(d) from DetalleReserva d
+             join d.reserva r
+             join r.trayectos t
+           where t.programacion.idProgramacion = :idProgramacion
+             and r.estadoReserva <> :cancelada
+           """)
+    long contarAsientosOcupados(@Param("idProgramacion") Long idProgramacion,
+                                @Param("cancelada") EstadoReserva cancelada);
 }
