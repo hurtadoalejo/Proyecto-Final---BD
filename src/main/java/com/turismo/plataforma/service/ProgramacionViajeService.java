@@ -1,4 +1,6 @@
 package com.turismo.plataforma.service;
+import com.turismo.plataforma.dto.programacion.DisponibilidadResponse;
+import com.turismo.plataforma.model.enums.EstadoReserva;
 
 import com.turismo.plataforma.dto.programacion.ProgramacionViajeRequest;
 import com.turismo.plataforma.dto.programacion.ProgramacionViajeResponse;
@@ -46,6 +48,14 @@ public class ProgramacionViajeService {
 
     public ProgramacionViajeResponse obtener(Long id) {
         return ProgramacionViajeResponse.from(buscarEntidad(id));
+    }
+
+    /** Atributo derivado: asientos disponibles = capacidad del vehículo - pasajeros reservados. */
+    public DisponibilidadResponse disponibilidad(Long id) {
+        ProgramacionViaje programacion = buscarEntidad(id);
+        int capacidad = programacion.getVehiculo().getCapacidad();
+        long ocupados = programacionRepository.contarAsientosOcupados(id, EstadoReserva.CANCELADA);
+        return new DisponibilidadResponse(id, capacidad, ocupados, capacidad - ocupados);
     }
 
     @Transactional

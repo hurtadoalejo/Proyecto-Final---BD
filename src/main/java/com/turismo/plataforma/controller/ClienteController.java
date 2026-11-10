@@ -1,4 +1,5 @@
 package com.turismo.plataforma.controller;
+import com.turismo.plataforma.dto.cliente.MillasResponse;
 
 import com.turismo.plataforma.dto.cliente.ClienteActualizarRequest;
 import com.turismo.plataforma.dto.cliente.ClienteRequest;
@@ -29,6 +30,11 @@ public class ClienteController {
     @GetMapping("/{id}")
     public ClienteResponse obtener(@PathVariable("id") Long id) {
         return clienteService.obtener(id);
+    }
+
+    @GetMapping("/{id}/millas")
+    public MillasResponse millas(@PathVariable("id") Long id) {
+        return clienteService.calcularMillas(id);
     }
 
     @PostMapping

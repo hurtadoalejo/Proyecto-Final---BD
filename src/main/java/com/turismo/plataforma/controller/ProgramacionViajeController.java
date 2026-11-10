@@ -1,4 +1,5 @@
 package com.turismo.plataforma.controller;
+import com.turismo.plataforma.dto.programacion.DisponibilidadResponse;
 
 import com.turismo.plataforma.dto.programacion.ProgramacionViajeRequest;
 import com.turismo.plataforma.dto.programacion.ProgramacionViajeResponse;
@@ -28,6 +29,12 @@ public class ProgramacionViajeController {
     @GetMapping("/{id}")
     public ProgramacionViajeResponse obtener(@PathVariable("id") Long id) {
         return programacionService.obtener(id);
+    }
+
+    /** GET /api/programaciones/{id}/asientos */
+    @GetMapping("/{id}/asientos")
+    public DisponibilidadResponse asientos(@PathVariable("id") Long id) {
+        return programacionService.disponibilidad(id);
     }
 
     @PostMapping
