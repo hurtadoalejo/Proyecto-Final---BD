@@ -11,7 +11,6 @@ import com.turismo.plataforma.model.Usuario;
 import com.turismo.plataforma.model.catalogo.Rol;
 import com.turismo.plataforma.repository.ClienteRepository;
 import com.turismo.plataforma.repository.UsuarioRepository;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,16 +22,13 @@ public class AuthService {
     private final ClienteRepository clienteRepository;
     private final UsuarioService usuarioService;
     private final CatalogoService catalogoService;
-    private final PasswordEncoder passwordEncoder;
 
     public AuthService(UsuarioRepository usuarioRepository, ClienteRepository clienteRepository,
-                       UsuarioService usuarioService, CatalogoService catalogoService,
-                       PasswordEncoder passwordEncoder) {
+                       UsuarioService usuarioService, CatalogoService catalogoService) {
         this.usuarioRepository = usuarioRepository;
         this.clienteRepository = clienteRepository;
         this.usuarioService = usuarioService;
         this.catalogoService = catalogoService;
-        this.passwordEncoder = passwordEncoder;
     }
 
     /** Crea un Cliente con rol CLIENTE. Correo e identificación no se pueden repetir. */
@@ -52,7 +48,7 @@ public class AuthService {
     @Transactional(readOnly = true)
     public LoginResponse login(LoginRequest request) {
         Usuario usuario = usuarioRepository.buscarPorCorreo(UsuarioService.normalizarCorreo(request.correo()))
-                .filter(u -> passwordEncoder.matches(request.contrasenia(), u.getContrasenia()))
+                .filter(u -> u.getContrasenia().equals(request.contrasenia()))
                 .orElseThrow(CredencialesInvalidasException::new);
 
         String tipoUsuario = usuario instanceof Empleado ? "EMPLEADO" : "CLIENTE";

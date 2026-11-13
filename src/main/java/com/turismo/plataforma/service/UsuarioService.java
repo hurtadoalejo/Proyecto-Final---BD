@@ -10,7 +10,6 @@ import com.turismo.plataforma.model.ubicacion.Ciudad;
 import com.turismo.plataforma.model.ubicacion.Departamento;
 import com.turismo.plataforma.repository.CiudadRepository;
 import com.turismo.plataforma.repository.UsuarioRepository;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.Locale;
@@ -22,14 +21,12 @@ public class UsuarioService {
     private final UsuarioRepository usuarioRepository;
     private final CiudadRepository ciudadRepository;
     private final CatalogoService catalogoService;
-    private final PasswordEncoder passwordEncoder;
 
     public UsuarioService(UsuarioRepository usuarioRepository, CiudadRepository ciudadRepository,
-                          CatalogoService catalogoService, PasswordEncoder passwordEncoder) {
+                          CatalogoService catalogoService) {
         this.usuarioRepository = usuarioRepository;
         this.ciudadRepository = ciudadRepository;
         this.catalogoService = catalogoService;
-        this.passwordEncoder = passwordEncoder;
     }
 
     /** Correo e identificación únicos. idUsuarioActual = null al crear; el id propio al modificar. */
@@ -75,9 +72,9 @@ public class UsuarioService {
         usuario.setCorreo(normalizarCorreo(datos.correo()));
     }
 
-    /** Guarda la contraseña cifrada con BCrypt (nunca en texto plano). */
+    /** Guarda la contraseña tal como llega (sin cifrar). */
     public void asignarContrasenia(Usuario usuario, String contrasenia) {
-        usuario.setContrasenia(passwordEncoder.encode(contrasenia));
+        usuario.setContrasenia(contrasenia);
     }
 
     public static String normalizarCorreo(String correo) {

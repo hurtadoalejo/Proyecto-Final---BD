@@ -44,7 +44,7 @@ public abstract class Usuario {
     @Column(name = "correo", nullable = false, unique = true, length = 100)
     private String correo;
 
-    /** Hash BCrypt, nunca la contraseña en texto plano. */
+    /** Contraseña del usuario (sin cifrar). */
     @Column(name = "contrasenia", nullable = false, length = 100)
     private String contrasenia;
 

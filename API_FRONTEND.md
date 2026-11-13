@@ -2,7 +2,7 @@
 
 Base URL: `http://localhost:8080`  ·  Todo es JSON  ·  Documentación interactiva: `http://localhost:8080/swagger-ui.html`
 
-CORS ya permite `http://localhost:5173` (Vite), `:4200` y `:3000`. Si el front corre en otro puerto, se agrega en `app.cors.origenes` de `application.properties`.
+CORS abierto: el front puede llamar desde cualquier origen (cualquier puerto de localhost, Live Server, etc.). No hay Spring Security: ningún endpoint pide autenticación.
 
 No hay token: el login valida correo y contraseña y devuelve los datos del usuario; el front los guarda (por ejemplo en `localStorage`) y usa `idUsuario` en las demás llamadas.
 
