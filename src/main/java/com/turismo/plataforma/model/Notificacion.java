@@ -1,44 +1,44 @@
 package com.turismo.plataforma.model;
 
-import com.turismo.plataforma.model.enums.EstadoNotificacion;
+import com.turismo.plataforma.model.catalogo.EstadoNotificacion;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 @Entity
-@Table(name = "notificacion")
+@Table(name = "Notificacion")
 @Getter @Setter @NoArgsConstructor
 public class Notificacion {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id_notificacion")
+    @Column(name = "idNotificacion")
     private Long idNotificacion;
 
-    @NotBlank @Size(max = 500)
-    @Column(name = "mensaje", nullable = false, length = 500)
+    @Column(name = "mensaje", nullable = false, length = 200)
     private String mensaje;
 
-    @NotNull
-    @Enumerated(EnumType.STRING)
-    @Column(name = "estado_notificacion", nullable = false, length = 20)
-    private EstadoNotificacion estadoNotificacion = EstadoNotificacion.PENDIENTE;
-
-    @Column(name = "fecha_envio")
+    @Column(name = "fechaEnvio")
     private LocalDateTime fechaEnvio;
 
-    @NotNull
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "id_cliente", nullable = false)
-    private Cliente cliente;
+    @JoinColumn(name = "idEstadoNotificacion", nullable = false)
+    private EstadoNotificacion estadoNotificacion;
 
+    /** Opcional: no toda notificación lleva oferta. */
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_cupon")
-    private Cupon cupon;
+    @JoinColumn(name = "idOferta")
+    private Oferta oferta;
+
+    /** Relación N:M con Cliente a través de la tabla ClienteNotificacion. */
+    @ManyToMany
+    @JoinTable(name = "ClienteNotificacion",
+            joinColumns = @JoinColumn(name = "idNotificacion"),
+            inverseJoinColumns = @JoinColumn(name = "idUsuario"))
+    private Set<Cliente> clientes = new LinkedHashSet<>();
 }

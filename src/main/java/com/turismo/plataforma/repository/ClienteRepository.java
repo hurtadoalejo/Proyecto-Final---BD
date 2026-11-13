@@ -9,8 +9,14 @@ import java.util.List;
 
 public interface ClienteRepository extends JpaRepository<Cliente, Long> {
 
+    /** Clientes cuya identificación o primer apellido contiene el texto, con todos sus datos. */
     @Query("""
            select c from Cliente c
+             join fetch c.rol
+             join fetch c.tipoIdentificacion
+             join fetch c.ciudad ci
+             join fetch ci.departamento d
+             join fetch d.pais
            where c.identificacion like concat('%', :texto, '%')
               or lower(c.nombre.primerApellido) like lower(concat('%', :texto, '%'))
            order by c.nombre.primerApellido, c.nombre.primerNombre

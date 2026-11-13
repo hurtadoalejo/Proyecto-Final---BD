@@ -1,10 +1,8 @@
 package com.turismo.plataforma.model;
 
-import com.turismo.plataforma.model.enums.EstadoTransaccion;
-import com.turismo.plataforma.model.enums.MetodoPago;
+import com.turismo.plataforma.model.catalogo.EstadoTransaccion;
+import com.turismo.plataforma.model.catalogo.MetodoPago;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.PositiveOrZero;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -12,36 +10,34 @@ import lombok.Setter;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+/** Entidad débil de Reserva: su PK es la de la reserva (@MapsId). */
 @Entity
-@Table(name = "transaccion")
+@Table(name = "Transaccion")
 @Getter @Setter @NoArgsConstructor
 public class Transaccion {
 
     @Id
-    @Column(name = "id_reserva")
+    @Column(name = "idReserva")
     private Long idReserva;
 
     @MapsId
     @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "id_reserva")
+    @JoinColumn(name = "idReserva")
     private Reserva reserva;
 
-    @NotNull @PositiveOrZero
-    @Column(name = "monto_pagado", nullable = false, precision = 12, scale = 2)
+    @Column(name = "montoPagado", nullable = false, precision = 12, scale = 2)
     private BigDecimal montoPagado;
 
-    @NotNull
-    @Enumerated(EnumType.STRING)
-    @Column(name = "metodo_pago", nullable = false, length = 20)
+    @Column(name = "fechaPago")
+    private LocalDateTime fechaPago;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "idMetodoPago", nullable = false)
     private MetodoPago metodoPago;
 
-    @NotNull
-    @Enumerated(EnumType.STRING)
-    @Column(name = "estado_transaccion", nullable = false, length = 20)
-    private EstadoTransaccion estadoTransaccion = EstadoTransaccion.PENDIENTE;
-
-    @Column(name = "fecha_pago")
-    private LocalDateTime fechaPago;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "idEstadoTransaccion", nullable = false)
+    private EstadoTransaccion estadoTransaccion;
 
     @OneToOne(mappedBy = "transaccion", cascade = CascadeType.ALL)
     private Factura factura;

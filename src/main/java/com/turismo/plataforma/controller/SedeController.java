@@ -14,36 +14,37 @@ import java.util.List;
 @RequestMapping("/api/sedes")
 public class SedeController {
 
-    private final SedeService sedeService;
+    private final SedeService servicio;
 
-    public SedeController(SedeService sedeService) {
-        this.sedeService = sedeService;
+    public SedeController(SedeService servicio) {
+        this.servicio = servicio;
     }
 
+    /** Filtro opcional ?q= */
     @GetMapping
     public List<SedeResponse> listar(@RequestParam(name = "q", required = false) String q) {
-        return sedeService.listar(q);
+        return servicio.listar(q);
     }
 
     @GetMapping("/{id}")
     public SedeResponse obtener(@PathVariable("id") Long id) {
-        return sedeService.obtener(id);
+        return servicio.obtener(id);
     }
 
     @PostMapping
     public ResponseEntity<SedeResponse> crear(@Valid @RequestBody SedeRequest request) {
-        SedeResponse creada = sedeService.crear(request);
-        return ResponseEntity.created(URI.create("/api/sedes/" + creada.idSede())).body(creada);
+        SedeResponse creado = servicio.crear(request);
+        return ResponseEntity.created(URI.create("/api/sedes/" + creado.idSede())).body(creado);
     }
 
     @PutMapping("/{id}")
     public SedeResponse actualizar(@PathVariable("id") Long id, @Valid @RequestBody SedeRequest request) {
-        return sedeService.actualizar(id, request);
+        return servicio.actualizar(id, request);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminar(@PathVariable("id") Long id) {
-        sedeService.eliminar(id);
+        servicio.eliminar(id);
         return ResponseEntity.noContent().build();
     }
 }

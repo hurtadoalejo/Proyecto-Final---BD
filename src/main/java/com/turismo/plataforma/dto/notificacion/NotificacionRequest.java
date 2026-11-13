@@ -1,20 +1,26 @@
 package com.turismo.plataforma.dto.notificacion;
 
-import com.turismo.plataforma.model.enums.EstadoNotificacion;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
-public record NotificacionRequest(
-        @NotNull(message = "El cliente es obligatorio")
-        Long idCliente,
+import java.util.Set;
 
+/**
+ * Notificación para uno o varios clientes (tabla ClienteNotificacion).
+ * estadoNotificacion: PENDIENTE, ENVIADO o FALLIDO. idOferta es opcional.
+ */
+public record NotificacionRequest(
         @NotBlank(message = "El mensaje es obligatorio")
-        @Size(max = 500, message = "El mensaje admite máximo 500 caracteres")
+        @Size(max = 200, message = "Máximo 200 caracteres")
         String mensaje,
 
-        Long idCupon,
+        @NotBlank(message = "El estado es obligatorio (PENDIENTE, ENVIADO o FALLIDO)")
+        String estadoNotificacion,
 
-        @NotNull(message = "El estado es obligatorio (ENVIADO, FALLIDO o PENDIENTE)")
-        EstadoNotificacion estadoNotificacion) {
+        Long idOferta,
+
+        @NotEmpty(message = "Debe haber al menos un cliente")
+        Set<@NotNull Long> idsClientes) {
 }

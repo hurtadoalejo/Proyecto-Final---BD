@@ -1,32 +1,28 @@
 package com.turismo.plataforma.model;
 
-import com.turismo.plataforma.model.enums.TipoTransporte;
+import com.turismo.plataforma.model.catalogo.TipoTransporte;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "vehiculo")
+@Table(name = "Vehiculo")
 @Getter @Setter @NoArgsConstructor
 public class Vehiculo {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id_vehiculo")
+    @Column(name = "idVehiculo")
     private Long idVehiculo;
 
-    @NotBlank @Size(max = 20)
-    @Column(name = "codigo_identificacion", nullable = false, unique = true, length = 20)
+    @Column(name = "codigoIdentificacion", nullable = false, unique = true, length = 25)
     private String codigoIdentificacion;
 
-    @NotNull
-    @Enumerated(EnumType.STRING)
-    @Column(name = "tipo_transporte", nullable = false, length = 20)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "idTipoTransporte", nullable = false)
     private TipoTransporte tipoTransporte;
 
-    @NotNull @Min(1) @Max(1000)
     @Column(name = "capacidad", nullable = false)
     private Integer capacidad;
 }

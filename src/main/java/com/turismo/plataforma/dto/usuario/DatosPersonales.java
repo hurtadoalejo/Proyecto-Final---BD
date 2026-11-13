@@ -1,8 +1,14 @@
 package com.turismo.plataforma.dto.usuario;
 
-import java.time.LocalDate;
-
+/**
+ * Datos personales que el frontend recolecta en el registro (mismos nombres de campo).
+ * pais, departamento y ciudad son ids tomados de /api/catalogos.
+ */
 public interface DatosPersonales {
+
+    String tipoIdentificacion();
+
+    String numeroIdentificacion();
 
     String primerNombre();
 
@@ -12,13 +18,17 @@ public interface DatosPersonales {
 
     String segundoApellido();
 
-    String identificacion();
+    Long pais();
 
-    LocalDate fechaNacimiento();
+    Long departamento();
+
+    Long ciudad();
 
     String direccion();
 
-    String telefono();
+    String indicativoPais();
+
+    String telefonoCelular();
 
     String correo();
 }

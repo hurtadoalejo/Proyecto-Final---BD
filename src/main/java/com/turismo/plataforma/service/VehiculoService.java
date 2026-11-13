@@ -5,34 +5,33 @@ import com.turismo.plataforma.dto.vehiculo.VehiculoResponse;
 import com.turismo.plataforma.exception.ConflictoException;
 import com.turismo.plataforma.exception.RecursoNoEncontradoException;
 import com.turismo.plataforma.model.Vehiculo;
+import com.turismo.plataforma.model.catalogo.TipoTransporte;
 import com.turismo.plataforma.repository.VehiculoRepository;
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Locale;
 
 @Service
 @Transactional(readOnly = true)
 public class VehiculoService {
 
     private final VehiculoRepository vehiculoRepository;
+    private final CatalogoService catalogoService;
 
-    public VehiculoService(VehiculoRepository vehiculoRepository) {
+    public VehiculoService(VehiculoRepository vehiculoRepository, CatalogoService catalogoService) {
         this.vehiculoRepository = vehiculoRepository;
+        this.catalogoService = catalogoService;
     }
 
-    /** Consulta: vehículos cuyo código contiene el texto (todos si viene vacío). */
     public List<VehiculoResponse> listar(String texto) {
         String filtro = texto == null ? "" : texto.trim();
-        return vehiculoRepository
-                .findByCodigoIdentificacionContainingIgnoreCaseOrderByCodigoIdentificacion(filtro)
-                .stream()
+        return vehiculoRepository.buscar(filtro).stream()
                 .map(VehiculoResponse::from)
                 .toList();
     }
 
-    /** vehiculo por su id */
     public VehiculoResponse obtener(Long id) {
         return VehiculoResponse.from(buscarEntidad(id));
     }
@@ -40,11 +39,12 @@ public class VehiculoService {
     @Transactional
     public VehiculoResponse crear(VehiculoRequest request) {
         String codigo = normalizarCodigo(request.codigoIdentificacion());
-        if (vehiculoRepository.existsByCodigoIdentificacion(codigo)) {
+        if (vehiculoRepository.existsByCodigoIdentificacionIgnoreCase(codigo)) {
             throw new ConflictoException("Ya existe un vehículo con el código " + codigo);
         }
+        TipoTransporte tipo = catalogoService.tipoTransporte(request.tipoTransporte());
         Vehiculo vehiculo = new Vehiculo();
-        aplicarDatos(vehiculo, request, codigo);
+        aplicar(vehiculo, codigo, tipo, request.capacidad());
         return VehiculoResponse.from(vehiculoRepository.save(vehiculo));
     }
 
@@ -52,32 +52,33 @@ public class VehiculoService {
     public VehiculoResponse actualizar(Long id, VehiculoRequest request) {
         Vehiculo vehiculo = buscarEntidad(id);
         String codigo = normalizarCodigo(request.codigoIdentificacion());
-        if (vehiculoRepository.existsByCodigoIdentificacionAndIdVehiculoNot(codigo, id)) {
-            throw new ConflictoException("Ya existe otro vehículo con el código " + codigo);
+        if (vehiculoRepository.existsByCodigoIdentificacionIgnoreCaseAndIdVehiculoNot(codigo, id)) {
+            throw new ConflictoException("Ya existe un vehículo con el código " + codigo);
         }
-        aplicarDatos(vehiculo, request, codigo);
+        TipoTransporte tipo = catalogoService.tipoTransporte(request.tipoTransporte());
+        aplicar(vehiculo, codigo, tipo, request.capacidad());
         return VehiculoResponse.from(vehiculo);
     }
 
+    /** Falla con 409 si el vehículo cubre alguna ruta. */
     @Transactional
     public void eliminar(Long id) {
-        Vehiculo vehiculo = buscarEntidad(id);
-        vehiculoRepository.delete(vehiculo);
+        vehiculoRepository.delete(buscarEntidad(id));
         vehiculoRepository.flush();
+    }
+
+    private static void aplicar(Vehiculo vehiculo, String codigo, TipoTransporte tipo, Integer capacidad) {
+        vehiculo.setCodigoIdentificacion(codigo);
+        vehiculo.setTipoTransporte(tipo);
+        vehiculo.setCapacidad(capacidad);
+    }
+
+    private static String normalizarCodigo(String codigo) {
+        return codigo.trim().toUpperCase(Locale.ROOT);
     }
 
     private Vehiculo buscarEntidad(Long id) {
         return vehiculoRepository.findById(id)
                 .orElseThrow(() -> new RecursoNoEncontradoException("No existe el vehículo con id " + id));
-    }
-
-    private void aplicarDatos(Vehiculo vehiculo, VehiculoRequest request, String codigo) {
-        vehiculo.setCodigoIdentificacion(codigo);
-        vehiculo.setTipoTransporte(request.tipoTransporte());
-        vehiculo.setCapacidad(request.capacidad());
-    }
-
-    private String normalizarCodigo(String codigo) {
-        return codigo.trim().toUpperCase();
     }
 }

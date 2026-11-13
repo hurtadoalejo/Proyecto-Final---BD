@@ -1,7 +1,6 @@
 package com.turismo.plataforma.model;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -9,31 +8,28 @@ import lombok.Setter;
 import java.math.BigDecimal;
 
 @Entity
-@Table(name = "plan")
+@Table(name = "Plan")
 @Getter @Setter @NoArgsConstructor
 public class Plan {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id_plan")
+    @Column(name = "idPlan")
     private Long idPlan;
 
-    @NotBlank @Size(max = 60)
-    @Column(name = "nombre_plan", nullable = false, unique = true, length = 60)
+    @Column(name = "nombrePlan", nullable = false, unique = true, length = 30)
     private String nombrePlan;
 
-    @Size(max = 255)
-    @Column(name = "descripcion_plan", length = 255)
+    @Column(name = "descripcionPlan", length = 200)
     private String descripcionPlan;
 
-    @NotNull @PositiveOrZero
-    @Column(name = "precio_extra", nullable = false, precision = 12, scale = 2)
-    private BigDecimal precioExtra;
+    /** Kilogramos. */
+    @Column(name = "pesoMaxEquipaje", nullable = false, precision = 5, scale = 2)
+    private BigDecimal pesoMaxEquipaje;
 
-    @Column(name = "incluye_check_in", nullable = false)
+    @Column(name = "incluyeCheckIn", nullable = false)
     private boolean incluyeCheckIn;
 
-    @NotNull @PositiveOrZero
-    @Column(name = "peso_max_equipaje", nullable = false, precision = 5, scale = 2)
-    private BigDecimal pesoMaxEquipaje;
+    @Column(name = "precioExtra", nullable = false, precision = 12, scale = 2)
+    private BigDecimal precioExtra;
 }

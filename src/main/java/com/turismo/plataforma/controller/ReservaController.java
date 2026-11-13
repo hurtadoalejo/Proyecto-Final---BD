@@ -11,7 +11,6 @@ import org.springframework.web.bind.annotation.*;
 import java.net.URI;
 import java.util.List;
 
-/** Endpoints REST de reservas. */
 @RestController
 @RequestMapping("/api/reservas")
 public class ReservaController {
@@ -22,32 +21,28 @@ public class ReservaController {
         this.reservaService = reservaService;
     }
 
-    /** GET /api/reservas?idCliente=1 (idCliente es opcional) */
+    /** ?idCliente= opcional: reservas de un cliente. */
     @GetMapping
     public List<ReservaResumenResponse> listar(@RequestParam(name = "idCliente", required = false) Long idCliente) {
         return reservaService.listar(idCliente);
     }
 
-    /** GET /api/reservas/{id} */
     @GetMapping("/{id}")
     public ReservaResponse obtener(@PathVariable("id") Long id) {
         return reservaService.obtener(id);
     }
 
-    /** POST /api/reservas -> 201 Created */
     @PostMapping
     public ResponseEntity<ReservaResponse> crear(@Valid @RequestBody ReservaRequest request) {
         ReservaResponse creada = reservaService.crear(request);
         return ResponseEntity.created(URI.create("/api/reservas/" + creada.idReserva())).body(creada);
     }
 
-    /** PUT /api/reservas/{id}/cancelar */
     @PutMapping("/{id}/cancelar")
     public ReservaResponse cancelar(@PathVariable("id") Long id) {
         return reservaService.cancelar(id);
     }
 
-    /** DELETE /api/reservas/{id} -> 204 No Content */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminar(@PathVariable("id") Long id) {
         reservaService.eliminar(id);

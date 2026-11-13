@@ -1,110 +1,156 @@
 package com.turismo.plataforma.service;
-import com.turismo.plataforma.dto.programacion.DisponibilidadResponse;
-import com.turismo.plataforma.model.enums.EstadoReserva;
 
-import com.turismo.plataforma.dto.programacion.ProgramacionViajeRequest;
-import com.turismo.plataforma.dto.programacion.ProgramacionViajeResponse;
+import com.turismo.plataforma.dto.programacion.*;
 import com.turismo.plataforma.exception.ConflictoException;
 import com.turismo.plataforma.exception.RecursoNoEncontradoException;
+import com.turismo.plataforma.exception.SolicitudInvalidaException;
 import com.turismo.plataforma.model.ProgramacionViaje;
 import com.turismo.plataforma.model.Ruta;
 import com.turismo.plataforma.model.Vehiculo;
 import com.turismo.plataforma.repository.ProgramacionViajeRepository;
 import com.turismo.plataforma.repository.RutaRepository;
-import com.turismo.plataforma.repository.VehiculoRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
 
+/** Salidas (fecha y hora) de cada ruta, puntuales o repetidas cada cierto número de horas. */
 @Service
 @Transactional(readOnly = true)
 public class ProgramacionViajeService {
 
-    private final ProgramacionViajeRepository programacionRepository;
-    private final RutaRepository rutaRepository;
-    private final VehiculoRepository vehiculoRepository;
+    /** Máximo de días por consulta del listado. */
+    private static final int MAX_DIAS_LISTADO = 31;
+    /** Máximo de salidas que crea una sola programación recurrente. */
+    private static final int MAX_SALIDAS_RECURRENTES = 1000;
 
-    public ProgramacionViajeService(ProgramacionViajeRepository programacionRepository,
-                                    RutaRepository rutaRepository,
-                                    VehiculoRepository vehiculoRepository) {
-        this.programacionRepository = programacionRepository;
+    private final ProgramacionViajeRepository programacionViajeRepository;
+    private final RutaRepository rutaRepository;
+
+    public ProgramacionViajeService(ProgramacionViajeRepository programacionViajeRepository,
+                                    RutaRepository rutaRepository) {
+        this.programacionViajeRepository = programacionViajeRepository;
         this.rutaRepository = rutaRepository;
-        this.vehiculoRepository = vehiculoRepository;
     }
 
-    public List<ProgramacionViajeResponse> listar(Long idRuta) {
-        List<ProgramacionViaje> programaciones;
-        if (idRuta == null) {
-            programaciones = programacionRepository.listarConRutaYVehiculo();
-        } else {
-            buscarRuta(idRuta);
-            programaciones = programacionRepository.listarPorRuta(idRuta);
+    /** Salidas entre desde y hasta (incluidos). Por defecto: hoy y los 7 días siguientes. */
+    public List<ProgramacionResponse> listar(Long idRuta, LocalDate desde, LocalDate hasta) {
+        LocalDate inicio = desde == null ? LocalDate.now() : desde;
+        LocalDate fin = hasta == null ? inicio.plusDays(7) : hasta;
+        if (fin.isBefore(inicio)) {
+            throw new SolicitudInvalidaException("La fecha 'hasta' no puede ser anterior a 'desde'");
         }
-        return programaciones.stream()
-                .map(ProgramacionViajeResponse::from)
+        if (ChronoUnit.DAYS.between(inicio, fin) > MAX_DIAS_LISTADO) {
+            throw new SolicitudInvalidaException("Consulta máximo " + MAX_DIAS_LISTADO + " días a la vez");
+        }
+        return programacionViajeRepository.listar(idRuta, inicio.atStartOfDay(), fin.plusDays(1).atStartOfDay())
+                .stream()
+                .map(ProgramacionResponse::from)
                 .toList();
     }
 
-    public ProgramacionViajeResponse obtener(Long id) {
-        return ProgramacionViajeResponse.from(buscarEntidad(id));
+    public ProgramacionResponse obtener(Long id) {
+        return ProgramacionResponse.from(buscarEntidad(id));
     }
 
     /** Atributo derivado: asientos disponibles = capacidad del vehículo - pasajeros reservados. */
     public DisponibilidadResponse disponibilidad(Long id) {
         ProgramacionViaje programacion = buscarEntidad(id);
-        int capacidad = programacion.getVehiculo().getCapacidad();
-        long ocupados = programacionRepository.contarAsientosOcupados(id, EstadoReserva.CANCELADA);
-        return new DisponibilidadResponse(id, capacidad, ocupados, capacidad - ocupados);
+        Vehiculo vehiculo = programacion.getRuta().getVehiculo();
+        int capacidad = vehiculo == null ? 0 : vehiculo.getCapacidad();
+        long ocupados = programacionViajeRepository.contarAsientosOcupados(id);
+        return new DisponibilidadResponse(id, capacidad, ocupados, Math.max(0, capacidad - ocupados));
     }
 
     @Transactional
-    public ProgramacionViajeResponse crear(ProgramacionViajeRequest request) {
+    public ProgramacionResponse crear(ProgramacionRequest request) {
+        Ruta ruta = buscarRutaConVehiculo(request.idRuta());
+        LocalDateTime salida = request.fechaHoraSalida().truncatedTo(ChronoUnit.MINUTES);
+        if (programacionViajeRepository.existsByRutaIdRutaAndFechaHoraSalida(ruta.getIdRuta(), salida)) {
+            throw new ConflictoException("La ruta " + ruta.getIdRuta() + " ya tiene una salida el " + salida);
+        }
         ProgramacionViaje programacion = new ProgramacionViaje();
-        aplicarDatos(programacion, request);
-        if (programacionRepository.existsByVehiculoIdVehiculoAndFechaHoraSalida(
-                request.idVehiculo(), request.fechaHoraSalida())) {
-            throw new ConflictoException("El vehículo ya tiene un viaje programado en esa fecha y hora");
-        }
-        return ProgramacionViajeResponse.from(programacionRepository.save(programacion));
+        programacion.setRuta(ruta);
+        programacion.setFechaHoraSalida(salida);
+        return ProgramacionResponse.from(programacionViajeRepository.save(programacion));
     }
 
+    /**
+     * Repite la ruta: una salida en fechaHoraInicio y otra cada "cadaHoras" horas hasta fechaHoraFin.
+     * Las que ya existían se omiten (no es error).
+     */
     @Transactional
-    public ProgramacionViajeResponse actualizar(Long id, ProgramacionViajeRequest request) {
-        ProgramacionViaje programacion = buscarEntidad(id);
-        if (programacionRepository.existsByVehiculoIdVehiculoAndFechaHoraSalidaAndIdProgramacionNot(
-                request.idVehiculo(), request.fechaHoraSalida(), id)) {
-            throw new ConflictoException("El vehículo ya tiene otro viaje programado en esa fecha y hora");
+    public ProgramacionRecurrenteResponse crearRecurrente(ProgramacionRecurrenteRequest request) {
+        LocalDateTime inicio = request.fechaHoraInicio().truncatedTo(ChronoUnit.MINUTES);
+        LocalDateTime fin = request.fechaHoraFin();
+        if (fin.isBefore(inicio)) {
+            throw new SolicitudInvalidaException("La fecha límite no puede ser anterior a la primera salida");
         }
-        aplicarDatos(programacion, request);
-        return ProgramacionViajeResponse.from(programacion);
+        long cantidad = ChronoUnit.HOURS.between(inicio, fin) / request.cadaHoras() + 1;
+        if (cantidad > MAX_SALIDAS_RECURRENTES) {
+            throw new SolicitudInvalidaException("Se crearían " + cantidad + " salidas; el máximo por solicitud es "
+                    + MAX_SALIDAS_RECURRENTES + ". Reduce el periodo o aumenta cadaHoras");
+        }
+        Ruta ruta = buscarRutaConVehiculo(request.idRuta());
+
+        List<ProgramacionViaje> nuevas = new ArrayList<>();
+        int omitidas = 0;
+        for (LocalDateTime salida = inicio; !salida.isAfter(fin); salida = salida.plusHours(request.cadaHoras())) {
+            if (programacionViajeRepository.existsByRutaIdRutaAndFechaHoraSalida(ruta.getIdRuta(), salida)) {
+                omitidas++;
+                continue;
+            }
+            ProgramacionViaje programacion = new ProgramacionViaje();
+            programacion.setRuta(ruta);
+            programacion.setFechaHoraSalida(salida);
+            nuevas.add(programacion);
+        }
+        List<ProgramacionResponse> salidas = programacionViajeRepository.saveAll(nuevas).stream()
+                .map(ProgramacionResponse::from)
+                .toList();
+        return new ProgramacionRecurrenteResponse(salidas.size(), omitidas, salidas);
     }
 
+    /** Cambia la ruta o la hora de una salida que todavía no tiene pasajeros. */
+    @Transactional
+    public ProgramacionResponse actualizar(Long id, ProgramacionRequest request) {
+        ProgramacionViaje programacion = buscarEntidad(id);
+        Ruta ruta = buscarRutaConVehiculo(request.idRuta());
+        LocalDateTime salida = request.fechaHoraSalida().truncatedTo(ChronoUnit.MINUTES);
+        if (programacionViajeRepository.existsByRutaIdRutaAndFechaHoraSalidaAndIdProgramacionViajeNot(
+                ruta.getIdRuta(), salida, id)) {
+            throw new ConflictoException("La ruta " + ruta.getIdRuta() + " ya tiene una salida el " + salida);
+        }
+        if (programacionViajeRepository.contarAsientosOcupados(id) > 0) {
+            throw new ConflictoException("La salida ya tiene pasajeros reservados; no se puede modificar");
+        }
+        programacion.setRuta(ruta);
+        programacion.setFechaHoraSalida(salida);
+        return ProgramacionResponse.from(programacion);
+    }
+
+    /** Falla con 409 si alguna reserva incluye esta salida. */
     @Transactional
     public void eliminar(Long id) {
-        ProgramacionViaje programacion = buscarEntidad(id);
-        programacionRepository.delete(programacion);
-        programacionRepository.flush();
+        programacionViajeRepository.delete(buscarEntidad(id));
+        programacionViajeRepository.flush();
+    }
+
+    private Ruta buscarRutaConVehiculo(Long idRuta) {
+        Ruta ruta = rutaRepository.findById(idRuta)
+                .orElseThrow(() -> new SolicitudInvalidaException("No existe la ruta con id " + idRuta));
+        if (ruta.getVehiculo() == null) {
+            throw new SolicitudInvalidaException("La ruta " + idRuta + " no tiene vehículo asignado");
+        }
+        return ruta;
     }
 
     private ProgramacionViaje buscarEntidad(Long id) {
-        return programacionRepository.findById(id)
+        return programacionViajeRepository.findById(id)
                 .orElseThrow(() -> new RecursoNoEncontradoException("No existe la programación con id " + id));
-    }
-
-    private void aplicarDatos(ProgramacionViaje programacion, ProgramacionViajeRequest request) {
-        programacion.setRuta(buscarRuta(request.idRuta()));
-        programacion.setVehiculo(buscarVehiculo(request.idVehiculo()));
-        programacion.setFechaHoraSalida(request.fechaHoraSalida());
-    }
-
-    private Ruta buscarRuta(Long idRuta) {
-        return rutaRepository.findById(idRuta)
-                .orElseThrow(() -> new RecursoNoEncontradoException("No existe la ruta con id " + idRuta));
-    }
-
-    private Vehiculo buscarVehiculo(Long idVehiculo) {
-        return vehiculoRepository.findById(idVehiculo)
-                .orElseThrow(() -> new RecursoNoEncontradoException("No existe el vehículo con id " + idVehiculo));
     }
 }

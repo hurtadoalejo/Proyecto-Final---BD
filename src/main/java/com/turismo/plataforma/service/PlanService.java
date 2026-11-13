@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+/** Planes de equipaje (Básico, Clásico...). Su precioExtra se suma por pasajero. */
 @Service
 @Transactional(readOnly = true)
 public class PlanService {
@@ -28,7 +29,6 @@ public class PlanService {
                 .toList();
     }
 
-    /** Consulta: un plan por su id. */
     public PlanResponse obtener(Long id) {
         return PlanResponse.from(buscarEntidad(id));
     }
@@ -40,7 +40,7 @@ public class PlanService {
             throw new ConflictoException("Ya existe un plan llamado " + nombre);
         }
         Plan plan = new Plan();
-        aplicarDatos(plan, request);
+        aplicar(plan, request);
         return PlanResponse.from(planRepository.save(plan));
     }
 
@@ -49,29 +49,30 @@ public class PlanService {
         Plan plan = buscarEntidad(id);
         String nombre = request.nombrePlan().trim();
         if (planRepository.existsByNombrePlanIgnoreCaseAndIdPlanNot(nombre, id)) {
-            throw new ConflictoException("Ya existe otro plan llamado " + nombre);
+            throw new ConflictoException("Ya existe un plan llamado " + nombre);
         }
-        aplicarDatos(plan, request);
+        aplicar(plan, request);
         return PlanResponse.from(plan);
     }
 
+    /** Falla con 409 si algún pasajero tiene este plan. */
     @Transactional
     public void eliminar(Long id) {
-        Plan plan = buscarEntidad(id);
-        planRepository.delete(plan);
+        planRepository.delete(buscarEntidad(id));
         planRepository.flush();
+    }
+
+    private static void aplicar(Plan plan, PlanRequest request) {
+        plan.setNombrePlan(request.nombrePlan().trim());
+        plan.setDescripcionPlan(request.descripcionPlan() == null || request.descripcionPlan().isBlank()
+                ? null : request.descripcionPlan().trim());
+        plan.setPesoMaxEquipaje(request.pesoMaxEquipaje());
+        plan.setIncluyeCheckIn(request.incluyeCheckIn());
+        plan.setPrecioExtra(request.precioExtra());
     }
 
     private Plan buscarEntidad(Long id) {
         return planRepository.findById(id)
                 .orElseThrow(() -> new RecursoNoEncontradoException("No existe el plan con id " + id));
-    }
-
-    private void aplicarDatos(Plan plan, PlanRequest request) {
-        plan.setNombrePlan(request.nombrePlan().trim());
-        plan.setDescripcionPlan(request.descripcionPlan());
-        plan.setPrecioExtra(request.precioExtra());
-        plan.setIncluyeCheckIn(request.incluyeCheckIn());
-        plan.setPesoMaxEquipaje(request.pesoMaxEquipaje());
     }
 }

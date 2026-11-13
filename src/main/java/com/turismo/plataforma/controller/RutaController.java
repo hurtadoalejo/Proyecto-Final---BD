@@ -1,5 +1,7 @@
 package com.turismo.plataforma.controller;
 
+import com.turismo.plataforma.dto.ruta.BusquedaRutasRequest;
+import com.turismo.plataforma.dto.ruta.BusquedaRutasResponse;
 import com.turismo.plataforma.dto.ruta.RutaRequest;
 import com.turismo.plataforma.dto.ruta.RutaResponse;
 import com.turismo.plataforma.service.RutaService;
@@ -20,6 +22,13 @@ public class RutaController {
         this.rutaService = rutaService;
     }
 
+    /** Búsqueda de viajes con el JSON del frontend (tipoTransporte, pasajeros, tramos). */
+    @PostMapping("/buscar")
+    public BusquedaRutasResponse buscar(@Valid @RequestBody BusquedaRutasRequest request) {
+        return rutaService.buscar(request);
+    }
+
+    /** ?q= opcional: nombre o código de la ciudad de origen o destino. */
     @GetMapping
     public List<RutaResponse> listar(@RequestParam(name = "q", required = false) String q) {
         return rutaService.listar(q);

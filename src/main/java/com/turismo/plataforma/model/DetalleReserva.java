@@ -1,42 +1,39 @@
 package com.turismo.plataforma.model;
 
+import com.turismo.plataforma.model.catalogo.TipoIdentificacion;
 import jakarta.persistence.*;
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+/** Un pasajero de la reserva. */
 @Entity
-@Table(name = "detalle_reserva")
+@Table(name = "DetalleReserva")
 @Getter @Setter @NoArgsConstructor
 public class DetalleReserva {
 
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id_detalle")
-    private Long idDetalle;
+    @EmbeddedId
+    private DetalleReservaId id;
 
-    @Valid
+    @MapsId("idReserva")
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "idReserva")
+    private Reserva reserva;
+
     @Embedded
     private NombreCompleto nombre = new NombreCompleto();
 
-    @NotBlank @Size(max = 20)
     @Column(name = "identificacion", nullable = false, length = 20)
     private String identificacion;
 
-    @NotBlank @Size(max = 5)
-    @Column(name = "numero_asiento", nullable = false, length = 5)
+    @Column(name = "numeroAsiento", nullable = false, length = 10)
     private String numeroAsiento;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "id_reserva", nullable = false)
-    private Reserva reserva;
+    @JoinColumn(name = "idTipoIdentificacion", nullable = false)
+    private TipoIdentificacion tipoIdentificacion;
 
-    @NotNull
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "id_plan", nullable = false)
+    @JoinColumn(name = "idPlan", nullable = false)
     private Plan plan;
 }

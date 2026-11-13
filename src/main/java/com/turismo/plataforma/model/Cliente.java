@@ -1,23 +1,17 @@
 package com.turismo.plataforma.model;
 
-import jakarta.persistence.*;
-import lombok.Getter;
+import jakarta.persistence.Entity;
+import jakarta.persistence.PrimaryKeyJoinColumn;
+import jakarta.persistence.Table;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
-import java.util.ArrayList;
-import java.util.List;
-
-
+/**
+ * Subclase de Usuario. millasAcumuladas es un atributo derivado:
+ * se calcula con ReservaViajeRepository, no se guarda.
+ */
 @Entity
-@Table(name = "cliente")
-@PrimaryKeyJoinColumn(name = "id_usuario")
-@Getter @Setter @NoArgsConstructor
+@Table(name = "Cliente")
+@PrimaryKeyJoinColumn(name = "idUsuario")
+@NoArgsConstructor
 public class Cliente extends Usuario {
-
-    @OneToMany(mappedBy = "cliente")
-    private List<Notificacion> notificaciones = new ArrayList<>();
-
-    @OneToMany(mappedBy = "cliente")
-    private List<Reserva> reservas = new ArrayList<>();
 }

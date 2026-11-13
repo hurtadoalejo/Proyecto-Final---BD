@@ -7,30 +7,17 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 
-/** Acceso a la tabla reserva. */
 public interface ReservaRepository extends JpaRepository<Reserva, Long> {
 
-    /**
-     * Todas las reservas con su cliente. También trae transacción y factura: son relaciones
-     * 1 a 1 inversas que Hibernate carga siempre, y así no hace una consulta extra por reserva.
-     */
-    @Query("""
-           select r from Reserva r
-             join fetch r.cliente
-             left join fetch r.transaccion t
-             left join fetch t.factura
-           order by r.fechaReserva desc
-           """)
-    List<Reserva> listarConCliente();
-
-    /** Las reservas de un cliente. */
+    /** Resumen de reservas (de un cliente, o todas si idCliente es null). */
     @Query("""
            select r from Reserva r
              join fetch r.cliente c
+             join fetch r.estadoReserva
              left join fetch r.transaccion t
              left join fetch t.factura
-           where c.idUsuario = :idCliente
+           where :idCliente is null or c.idUsuario = :idCliente
            order by r.fechaReserva desc
            """)
-    List<Reserva> listarPorCliente(@Param("idCliente") Long idCliente);
+    List<Reserva> listar(@Param("idCliente") Long idCliente);
 }

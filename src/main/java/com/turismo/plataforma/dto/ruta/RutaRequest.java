@@ -4,13 +4,18 @@ import jakarta.validation.constraints.*;
 
 import java.math.BigDecimal;
 
+/** Ruta con las columnas del modelo, más el vehículo que la cubre (tabla RutaVehiculo). */
 public record RutaRequest(
-        @NotBlank(message = "El origen es obligatorio")
-        @Size(max = 150, message = "El origen admite máximo 150 caracteres")
+        @NotNull(message = "La ciudad de origen es obligatoria")
+        Long idCiudadOrigen,
+
+        @Size(max = 40, message = "Máximo 40 caracteres")
         String direccionOrigen,
 
-        @NotBlank(message = "El destino es obligatorio")
-        @Size(max = 150, message = "El destino admite máximo 150 caracteres")
+        @NotNull(message = "La ciudad de destino es obligatoria")
+        Long idCiudadDestino,
+
+        @Size(max = 40, message = "Máximo 40 caracteres")
         String direccionDestino,
 
         @NotNull(message = "La distancia es obligatoria")
@@ -25,5 +30,8 @@ public record RutaRequest(
         @NotNull(message = "El precio base es obligatorio")
         @PositiveOrZero(message = "El precio base no puede ser negativo")
         @Digits(integer = 10, fraction = 2, message = "El precio admite máximo 2 decimales")
-        BigDecimal precioBase) {
+        BigDecimal precioBase,
+
+        @NotNull(message = "El vehículo es obligatorio")
+        Long idVehiculo) {
 }

@@ -7,8 +7,9 @@ import com.turismo.plataforma.exception.RecursoNoEncontradoException;
 import com.turismo.plataforma.model.Factura;
 import com.turismo.plataforma.model.Reserva;
 import com.turismo.plataforma.model.Transaccion;
-import com.turismo.plataforma.model.enums.EstadoReserva;
-import com.turismo.plataforma.model.enums.EstadoTransaccion;
+import com.turismo.plataforma.model.catalogo.EstadoReserva;
+import com.turismo.plataforma.model.catalogo.EstadoTransaccion;
+import com.turismo.plataforma.model.catalogo.MetodoPago;
 import com.turismo.plataforma.repository.ReservaRepository;
 import com.turismo.plataforma.repository.TransaccionRepository;
 import org.springframework.stereotype.Service;
@@ -16,57 +17,61 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 
+/**
+ * Pago de una reserva PENDIENTE: crea la Transacción (APROBADA) por el valor total,
+ * emite la Factura y deja la reserva CONFIRMADA.
+ */
 @Service
 @Transactional(readOnly = true)
 public class PagoService {
 
     private final ReservaRepository reservaRepository;
     private final TransaccionRepository transaccionRepository;
+    private final CatalogoService catalogoService;
 
-    public PagoService(ReservaRepository reservaRepository, TransaccionRepository transaccionRepository) {
+    public PagoService(ReservaRepository reservaRepository, TransaccionRepository transaccionRepository,
+                       CatalogoService catalogoService) {
         this.reservaRepository = reservaRepository;
         this.transaccionRepository = transaccionRepository;
+        this.catalogoService = catalogoService;
     }
 
-    /** Consulta: el pago y la factura de una reserva. */
     public PagoResponse obtener(Long idReserva) {
-        buscarReserva(idReserva);
-        return transaccionRepository.findById(idReserva)
-                .map(PagoResponse::from)
-                .orElseThrow(() -> new RecursoNoEncontradoException(
-                        "La reserva " + idReserva + " no tiene pago registrado"));
+        Transaccion transaccion = transaccionRepository.findById(idReserva)
+                .orElseThrow(() -> new RecursoNoEncontradoException("La reserva " + idReserva + " no tiene pago"));
+        return PagoResponse.from(transaccion);
     }
 
-    /** Registro: paga una reserva PENDIENTE, genera la factura y la confirma. */
     @Transactional
     public PagoResponse pagar(Long idReserva, PagoRequest request) {
-        Reserva reserva = buscarReserva(idReserva);
+        Reserva reserva = reservaRepository.findById(idReserva)
+                .orElseThrow(() -> new RecursoNoEncontradoException("No existe la reserva con id " + idReserva));
         if (reserva.getTransaccion() != null) {
-            throw new ConflictoException("La reserva ya tiene un pago registrado");
+            throw new ConflictoException("La reserva " + idReserva + " ya fue pagada");
         }
-        if (reserva.getEstadoReserva() != EstadoReserva.PENDIENTE) {
-            throw new ConflictoException("Solo se puede pagar una reserva PENDIENTE; esta está "
-                    + reserva.getEstadoReserva());
+        if (!reserva.tieneEstado(EstadoReserva.PENDIENTE)) {
+            throw new ConflictoException("Solo se pagan reservas PENDIENTES; esta está "
+                    + reserva.getEstadoReserva().getNombreEstadoReserva());
         }
+        MetodoPago metodoPago = catalogoService.metodoPago(request.metodoPago());
+        EstadoTransaccion aprobada = catalogoService.estadoTransaccion(EstadoTransaccion.APROBADA);
+        EstadoReserva confirmada = catalogoService.estadoReserva(EstadoReserva.CONFIRMADA);
+        LocalDateTime ahora = LocalDateTime.now();
 
         Transaccion transaccion = new Transaccion();
         transaccion.setReserva(reserva);
         transaccion.setMontoPagado(reserva.calcularValorTotal());
-        transaccion.setMetodoPago(request.metodoPago());
-        transaccion.setEstadoTransaccion(EstadoTransaccion.APROBADA);
-        transaccion.setFechaPago(LocalDateTime.now());
+        transaccion.setFechaPago(ahora);
+        transaccion.setMetodoPago(metodoPago);
+        transaccion.setEstadoTransaccion(aprobada);
 
         Factura factura = new Factura();
         factura.setTransaccion(transaccion);
+        factura.setFechaEmision(ahora);
         transaccion.setFactura(factura);
 
         reserva.setTransaccion(transaccion);
-        reserva.setEstadoReserva(EstadoReserva.CONFIRMADA);
+        reserva.setEstadoReserva(confirmada);
         return PagoResponse.from(transaccionRepository.save(transaccion));
-    }
-
-    private Reserva buscarReserva(Long idReserva) {
-        return reservaRepository.findById(idReserva)
-                .orElseThrow(() -> new RecursoNoEncontradoException("No existe la reserva con id " + idReserva));
     }
 }

@@ -1,15 +1,12 @@
 package com.turismo.plataforma.service;
 
 import com.turismo.plataforma.dto.cliente.ClienteActualizarRequest;
-import com.turismo.plataforma.dto.cliente.ClienteRequest;
 import com.turismo.plataforma.dto.cliente.ClienteResponse;
 import com.turismo.plataforma.dto.cliente.MillasResponse;
 import com.turismo.plataforma.exception.RecursoNoEncontradoException;
 import com.turismo.plataforma.model.Cliente;
-import com.turismo.plataforma.model.enums.EstadoReserva;
-import com.turismo.plataforma.model.enums.Rol;
 import com.turismo.plataforma.repository.ClienteRepository;
-import com.turismo.plataforma.repository.ReservaTrayectoRepository;
+import com.turismo.plataforma.repository.ReservaViajeRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,6 +14,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.List;
 
+/** Los clientes se crean con POST /api/auth/registro; aquí se consultan, modifican y eliminan. */
 @Service
 @Transactional(readOnly = true)
 public class ClienteService {
@@ -25,17 +23,17 @@ public class ClienteService {
     private static final BigDecimal MILLAS_POR_KM = new BigDecimal("0.621371");
 
     private final ClienteRepository clienteRepository;
+    private final ReservaViajeRepository reservaViajeRepository;
     private final UsuarioService usuarioService;
-    private final ReservaTrayectoRepository reservaTrayectoRepository;
 
-    public ClienteService(ClienteRepository clienteRepository, UsuarioService usuarioService,
-                          ReservaTrayectoRepository reservaTrayectoRepository) {
+    public ClienteService(ClienteRepository clienteRepository, ReservaViajeRepository reservaViajeRepository,
+                          UsuarioService usuarioService) {
         this.clienteRepository = clienteRepository;
+        this.reservaViajeRepository = reservaViajeRepository;
         this.usuarioService = usuarioService;
-        this.reservaTrayectoRepository = reservaTrayectoRepository;
     }
 
-    /** Consulta: clientes por identificación o primer apellido (todos si viene vacío). */
+    /** Clientes por identificación o primer apellido (todos si q viene vacío). */
     public List<ClienteResponse> listar(String texto) {
         String filtro = texto == null ? "" : texto.trim();
         return clienteRepository.buscar(filtro).stream()
@@ -43,7 +41,6 @@ public class ClienteService {
                 .toList();
     }
 
-    /** Consulta: un cliente por su id. */
     public ClienteResponse obtener(Long id) {
         return ClienteResponse.from(buscarEntidad(id));
     }
@@ -51,8 +48,7 @@ public class ClienteService {
     /** Atributo derivado: millas por los kilómetros de sus reservas confirmadas. */
     public MillasResponse calcularMillas(Long id) {
         Cliente cliente = buscarEntidad(id);
-        BigDecimal kilometros = reservaTrayectoRepository.sumarDistanciaRecorrida(
-                cliente.getIdUsuario(), EstadoReserva.CONFIRMADA);
+        BigDecimal kilometros = reservaViajeRepository.sumarDistanciaRecorrida(cliente.getIdUsuario());
         if (kilometros == null) {
             kilometros = BigDecimal.ZERO;
         }
@@ -60,18 +56,7 @@ public class ClienteService {
         return new MillasResponse(cliente.getIdUsuario(), kilometros, millas);
     }
 
-    /** Registro: correo e identificación únicos, contraseña cifrada y rol CLIENTE. */
-    @Transactional
-    public ClienteResponse crear(ClienteRequest request) {
-        usuarioService.validarDatosUnicos(request, null);
-        Cliente cliente = new Cliente();
-        usuarioService.aplicarDatosPersonales(cliente, request);
-        usuarioService.asignarContrasenia(cliente, request.contrasenia());
-        cliente.setRol(Rol.CLIENTE);
-        return ClienteResponse.from(clienteRepository.save(cliente));
-    }
-
-    /** Modificación de los datos personales (la contraseña no cambia aquí). */
+    /** Modifica los datos personales (la contraseña no cambia aquí). */
     @Transactional
     public ClienteResponse actualizar(Long id, ClienteActualizarRequest request) {
         Cliente cliente = buscarEntidad(id);
@@ -80,7 +65,7 @@ public class ClienteService {
         return ClienteResponse.from(cliente);
     }
 
-    /** Eliminación: falla con 409 si el cliente tiene reservas o notificaciones. */
+    /** Falla con 409 si el cliente tiene reservas. */
     @Transactional
     public void eliminar(Long id) {
         Cliente cliente = buscarEntidad(id);

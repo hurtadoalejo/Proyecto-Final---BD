@@ -1,33 +1,28 @@
 package com.turismo.plataforma.model;
 
+import com.turismo.plataforma.model.ubicacion.Ciudad;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.util.ArrayList;
-import java.util.List;
-
 @Entity
-@Table(name = "sede")
+@Table(name = "Sede")
 @Getter @Setter @NoArgsConstructor
 public class Sede {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id_sede")
+    @Column(name = "idSede")
     private Long idSede;
 
-    @NotBlank @Size(max = 100)
-    @Column(name = "nombre_sede", nullable = false, length = 100)
+    @Column(name = "nombreSede", nullable = false, unique = true, length = 40)
     private String nombreSede;
 
-    @NotBlank @Size(max = 150)
-    @Column(name = "direccion", nullable = false, length = 150)
+    @Column(name = "direccion", nullable = false, length = 60)
     private String direccion;
 
-    @OneToMany(mappedBy = "sede")
-    private List<Empleado> empleados = new ArrayList<>();
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "idCiudad", nullable = false)
+    private Ciudad ciudad;
 }

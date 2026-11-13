@@ -11,41 +11,43 @@ import org.springframework.web.bind.annotation.*;
 import java.net.URI;
 import java.util.List;
 
+/** Empleados (rol EMPLEADO o ADMIN). La contraseña solo se envía al crear. */
 @RestController
 @RequestMapping("/api/empleados")
 public class EmpleadoController {
 
-    private final EmpleadoService empleadoService;
+    private final EmpleadoService servicio;
 
-    public EmpleadoController(EmpleadoService empleadoService) {
-        this.empleadoService = empleadoService;
+    public EmpleadoController(EmpleadoService servicio) {
+        this.servicio = servicio;
     }
 
+    /** ?idSede= opcional: empleados de una sede. */
     @GetMapping
     public List<EmpleadoResponse> listar(@RequestParam(name = "idSede", required = false) Long idSede) {
-        return empleadoService.listar(idSede);
+        return servicio.listar(idSede);
     }
 
     @GetMapping("/{id}")
     public EmpleadoResponse obtener(@PathVariable("id") Long id) {
-        return empleadoService.obtener(id);
+        return servicio.obtener(id);
     }
 
     @PostMapping
     public ResponseEntity<EmpleadoResponse> crear(@Valid @RequestBody EmpleadoRequest request) {
-        EmpleadoResponse creado = empleadoService.crear(request);
-        return ResponseEntity.created(URI.create("/api/empleados/" + creado.idUsuario())).body(creado);
+        EmpleadoResponse creado = servicio.crear(request);
+        return ResponseEntity.created(URI.create("/api/empleados/" + creado.datosPersonales().idUsuario())).body(creado);
     }
 
     @PutMapping("/{id}")
     public EmpleadoResponse actualizar(@PathVariable("id") Long id,
                                        @Valid @RequestBody EmpleadoActualizarRequest request) {
-        return empleadoService.actualizar(id, request);
+        return servicio.actualizar(id, request);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminar(@PathVariable("id") Long id) {
-        empleadoService.eliminar(id);
+        servicio.eliminar(id);
         return ResponseEntity.noContent().build();
     }
 }
