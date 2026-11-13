@@ -2,6 +2,7 @@ package com.turismo.plataforma.service;
 
 import com.turismo.plataforma.dto.catalogo.CatalogoItem;
 import com.turismo.plataforma.dto.catalogo.CiudadResponse;
+import com.turismo.plataforma.dto.catalogo.IndicativoResponse;
 import com.turismo.plataforma.exception.SolicitudInvalidaException;
 import com.turismo.plataforma.model.catalogo.*;
 import com.turismo.plataforma.repository.*;
@@ -64,6 +65,14 @@ public class CatalogoService {
     public List<CatalogoItem> paises() {
         return paisRepository.findAllByOrderByNombrePais().stream()
                 .map(p -> new CatalogoItem(p.getIdPais(), p.getNombrePais()))
+                .toList();
+    }
+
+    /** Indicativos telefónicos (valor a enviar: indicativo, ej. "+57"). */
+    public List<IndicativoResponse> indicativos() {
+        return paisRepository.findAllByOrderByNombrePais().stream()
+                .filter(p -> p.getIndicativo() != null)
+                .map(p -> new IndicativoResponse(p.getIdPais(), p.getNombrePais(), "+" + p.getIndicativo()))
                 .toList();
     }
 

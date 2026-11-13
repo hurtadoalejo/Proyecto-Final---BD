@@ -8,7 +8,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,7 +15,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 
 /**
- * Al arrancar, si no hay ningún ADMIN, crea el administrador inicial (la contraseña se guarda cifrada).
+ * Al arrancar, si no hay ningún ADMIN, crea el administrador inicial.
  * Necesita que ya se hayan ejecutado 01_esquema.sql y 02_datos.sql; si falta algo, solo avisa en el log.
  */
 @Component
@@ -32,13 +31,12 @@ public class DataInitializer implements ApplicationRunner {
     private final CargoRepository cargoRepository;
     private final SedeRepository sedeRepository;
     private final CiudadRepository ciudadRepository;
-    private final PasswordEncoder passwordEncoder;
     private final String contraseniaAdmin;
 
     public DataInitializer(UsuarioRepository usuarioRepository, RolRepository rolRepository,
                            TipoIdentificacionRepository tipoIdentificacionRepository,
                            CargoRepository cargoRepository, SedeRepository sedeRepository,
-                           CiudadRepository ciudadRepository, PasswordEncoder passwordEncoder,
+                           CiudadRepository ciudadRepository,
                            @Value("${app.admin.contrasenia}") String contraseniaAdmin) {
         this.usuarioRepository = usuarioRepository;
         this.rolRepository = rolRepository;
@@ -46,7 +44,6 @@ public class DataInitializer implements ApplicationRunner {
         this.cargoRepository = cargoRepository;
         this.sedeRepository = sedeRepository;
         this.ciudadRepository = ciudadRepository;
-        this.passwordEncoder = passwordEncoder;
         this.contraseniaAdmin = contraseniaAdmin;
     }
 
@@ -75,10 +72,10 @@ public class DataInitializer implements ApplicationRunner {
         admin.getNombre().setPrimerApellido("Restrepo");
         admin.setTipoIdentificacion(tipo.get());
         admin.setIdentificacion("1020456789");
-        admin.setIndicativoPais("+57");
-        admin.setTelefono("3104567890");
+        admin.setFechaNacimiento(LocalDate.of(1988, 4, 12));
+        admin.setTelefono("+57 3104567890");
         admin.setCorreo(CORREO_ADMIN);
-        admin.setContrasenia(passwordEncoder.encode(contraseniaAdmin));
+        admin.setContrasenia(contraseniaAdmin);
         admin.setDireccion("Calle 26 # 92-32");
         admin.setCiudad(ciudad.get());
         admin.setRol(rol.get());

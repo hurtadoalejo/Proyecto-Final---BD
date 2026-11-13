@@ -15,7 +15,7 @@ public class Ciudad {
     @Column(name = "idCiudad")
     private Long idCiudad;
 
-    @Column(name = "nombreCiudad", nullable = false, length = 25)
+    @Column(name = "nombreCiudad", nullable = false, length = 40)
     private String nombreCiudad;
 
     /** Código de 3 letras que usa el frontend (BOG, MAD...). Solo lo tienen las ciudades con rutas. */

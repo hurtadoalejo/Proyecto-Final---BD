@@ -8,9 +8,11 @@ import com.turismo.plataforma.model.Usuario;
 import com.turismo.plataforma.model.catalogo.TipoIdentificacion;
 import com.turismo.plataforma.model.ubicacion.Ciudad;
 import com.turismo.plataforma.model.ubicacion.Departamento;
+import com.turismo.plataforma.model.ubicacion.Pais;
 import com.turismo.plataforma.repository.CiudadRepository;
+import com.turismo.plataforma.repository.DepartamentoRepository;
+import com.turismo.plataforma.repository.PaisRepository;
 import com.turismo.plataforma.repository.UsuarioRepository;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.Locale;
@@ -20,16 +22,19 @@ import java.util.Locale;
 public class UsuarioService {
 
     private final UsuarioRepository usuarioRepository;
+    private final PaisRepository paisRepository;
+    private final DepartamentoRepository departamentoRepository;
     private final CiudadRepository ciudadRepository;
     private final CatalogoService catalogoService;
-    private final PasswordEncoder passwordEncoder;
 
-    public UsuarioService(UsuarioRepository usuarioRepository, CiudadRepository ciudadRepository,
-                          CatalogoService catalogoService, PasswordEncoder passwordEncoder) {
+    public UsuarioService(UsuarioRepository usuarioRepository, PaisRepository paisRepository,
+                          DepartamentoRepository departamentoRepository, CiudadRepository ciudadRepository,
+                          CatalogoService catalogoService) {
         this.usuarioRepository = usuarioRepository;
+        this.paisRepository = paisRepository;
+        this.departamentoRepository = departamentoRepository;
         this.ciudadRepository = ciudadRepository;
         this.catalogoService = catalogoService;
-        this.passwordEncoder = passwordEncoder;
     }
 
     /** Correo e identificación únicos. idUsuarioActual = null al crear; el id propio al modificar. */
@@ -58,7 +63,8 @@ public class UsuarioService {
      */
     public void aplicarDatosPersonales(Usuario usuario, DatosPersonales datos) {
         TipoIdentificacion tipoIdentificacion = catalogoService.tipoIdentificacion(datos.tipoIdentificacion());
-        Ciudad ciudad = validarUbicacion(datos);
+        Ciudad ciudad = buscarUbicacion(datos);
+        String telefono = unirTelefono(datos.indicativo(), datos.telefono());
 
         NombreCompleto nombre = usuario.getNombre();
         nombre.setPrimerNombre(datos.primerNombre().trim());
@@ -68,36 +74,44 @@ public class UsuarioService {
 
         usuario.setTipoIdentificacion(tipoIdentificacion);
         usuario.setIdentificacion(datos.numeroIdentificacion().trim());
+        usuario.setFechaNacimiento(datos.fechaNacimiento());
         usuario.setCiudad(ciudad);
         usuario.setDireccion(datos.direccion().trim());
-        usuario.setIndicativoPais(datos.indicativoPais().trim());
-        usuario.setTelefono(datos.telefonoCelular().trim());
+        usuario.setTelefono(telefono);
         usuario.setCorreo(normalizarCorreo(datos.correo()));
     }
 
-    /** Guarda la contraseña cifrada con BCrypt (nunca en texto plano). */
+    /** Guarda la contraseña tal como llega (sin cifrar). */
     public void asignarContrasenia(Usuario usuario, String contrasenia) {
-        usuario.setContrasenia(passwordEncoder.encode(contrasenia));
+        usuario.setContrasenia(contrasenia);
     }
 
     public static String normalizarCorreo(String correo) {
         return correo.trim().toLowerCase(Locale.ROOT);
     }
 
-    /** La ciudad debe existir y pertenecer al departamento y país enviados. */
-    private Ciudad validarUbicacion(DatosPersonales datos) {
-        Ciudad ciudad = ciudadRepository.buscarConUbicacion(datos.ciudad())
-                .orElseThrow(() -> new SolicitudInvalidaException("No existe la ciudad con id " + datos.ciudad()));
-        Departamento departamento = ciudad.getDepartamento();
-        if (!departamento.getIdDepartamento().equals(datos.departamento())) {
-            throw new SolicitudInvalidaException("La ciudad " + ciudad.getNombreCiudad()
-                    + " no pertenece al departamento con id " + datos.departamento());
+    /** País, departamento y ciudad llegan por nombre (los del formulario del frontend). */
+    private Ciudad buscarUbicacion(DatosPersonales datos) {
+        Pais pais = paisRepository.findByNombrePaisIgnoreCase(datos.pais().trim())
+                .orElseThrow(() -> new SolicitudInvalidaException("No existe el país " + datos.pais()));
+        Departamento departamento = departamentoRepository
+                .findByNombreDepartamentoIgnoreCaseAndPaisIdPais(datos.departamento().trim(), pais.getIdPais())
+                .orElseThrow(() -> new SolicitudInvalidaException("El departamento " + datos.departamento()
+                        + " no existe en " + pais.getNombrePais()));
+        return ciudadRepository
+                .findByNombreCiudadIgnoreCaseAndDepartamentoIdDepartamento(datos.ciudad().trim(),
+                        departamento.getIdDepartamento())
+                .orElseThrow(() -> new SolicitudInvalidaException("La ciudad " + datos.ciudad()
+                        + " no existe en " + departamento.getNombreDepartamento()));
+    }
+
+    /** Guarda indicativo y número juntos en la columna telefono: "+57 3001234567". */
+    private static String unirTelefono(String indicativo, String telefono) {
+        String numero = telefono.replaceAll("\\D", "");
+        if (numero.length() < 7 || numero.length() > 14) {
+            throw new SolicitudInvalidaException("El teléfono debe tener entre 7 y 14 dígitos");
         }
-        if (!departamento.getPais().getIdPais().equals(datos.pais())) {
-            throw new SolicitudInvalidaException("El departamento " + departamento.getNombreDepartamento()
-                    + " no pertenece al país con id " + datos.pais());
-        }
-        return ciudad;
+        return indicativo.trim() + " " + numero;
     }
 
     private static String opcional(String texto) {

@@ -31,10 +31,7 @@ public abstract class Usuario {
     @Column(name = "identificacion", nullable = false, unique = true, length = 20)
     private String identificacion;
 
-    @Column(name = "indicativoPais", length = 5)
-    private String indicativoPais;
-
-    /** Número celular sin indicativo. */
+    /** Indicativo y número separados por un espacio, ej. "+57 3001234567". */
     @Column(name = "telefono", length = 20)
     private String telefono;
 
@@ -44,8 +41,8 @@ public abstract class Usuario {
     @Column(name = "correo", nullable = false, unique = true, length = 100)
     private String correo;
 
-    /** Hash BCrypt, nunca la contraseña en texto plano. */
-    @Column(name = "contrasenia", nullable = false, length = 100)
+    /** Contraseña del usuario (sin cifrar). */
+    @Column(name = "contrasenia", nullable = false, length = 50)
     private String contrasenia;
 
     @Column(name = "direccion", length = 50)

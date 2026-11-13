@@ -59,7 +59,7 @@ public class EmpleadoService {
 
         Empleado empleado = new Empleado();
         usuarioService.aplicarDatosPersonales(empleado, request);
-        usuarioService.asignarContrasenia(empleado, request.contrasenia());
+        usuarioService.asignarContrasenia(empleado, request.contrasena());
         empleado.setRol(rol);
         empleado.setCargo(cargo);
         empleado.setSede(sede);
