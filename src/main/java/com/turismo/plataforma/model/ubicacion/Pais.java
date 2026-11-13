@@ -17,4 +17,8 @@ public class Pais {
 
     @Column(name = "nombrePais", nullable = false, unique = true, length = 25)
     private String nombrePais;
+
+    /** Indicativo telefónico del país (ej.: +57). */
+    @Column(name = "indicativo", nullable = false, length = 5)
+    private String indicativo;
 }

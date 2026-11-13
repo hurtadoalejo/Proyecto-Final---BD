@@ -65,6 +65,7 @@ public class UsuarioService {
 
         usuario.setTipoIdentificacion(tipoIdentificacion);
         usuario.setIdentificacion(datos.numeroIdentificacion().trim());
+        usuario.setFechaNacimiento(datos.fechaNacimiento());
         usuario.setCiudad(ciudad);
         usuario.setDireccion(datos.direccion().trim());
         usuario.setIndicativoPais(datos.indicativoPais().trim());

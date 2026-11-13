@@ -3,6 +3,8 @@ package com.turismo.plataforma.dto.auth;
 import com.turismo.plataforma.dto.usuario.DatosPersonales;
 import jakarta.validation.constraints.*;
 
+import java.time.LocalDate;
+
 /** Registro de un cliente. Mismos campos que envía el frontend. */
 public record RegistroRequest(
         @NotBlank(message = "El tipo de identificación es obligatorio (CC, CE, TI, PA, PEP)")
@@ -25,6 +27,10 @@ public record RegistroRequest(
 
         @Size(max = 20, message = "Máximo 20 caracteres")
         String segundoApellido,
+
+        @NotNull(message = "La fecha de nacimiento es obligatoria (formato 2000-05-31)")
+        @Past(message = "La fecha de nacimiento debe ser una fecha pasada")
+        LocalDate fechaNacimiento,
 
         @NotNull(message = "El país es obligatorio (id de /api/catalogos/paises)")
         Long pais,

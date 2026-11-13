@@ -2,6 +2,7 @@ package com.turismo.plataforma.controller;
 
 import com.turismo.plataforma.dto.catalogo.CatalogoItem;
 import com.turismo.plataforma.dto.catalogo.CiudadResponse;
+import com.turismo.plataforma.dto.catalogo.IndicativoResponse;
 import com.turismo.plataforma.service.CatalogoService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -24,6 +25,12 @@ public class CatalogoController {
     @GetMapping("/paises")
     public List<CatalogoItem> paises() {
         return catalogoService.paises();
+    }
+
+    /** Para el select de indicativo: [{ idPais, nombrePais, indicativo: "+57" }]. */
+    @GetMapping("/indicativos")
+    public List<IndicativoResponse> indicativos() {
+        return catalogoService.indicativos();
     }
 
     @GetMapping("/paises/{idPais}/departamentos")

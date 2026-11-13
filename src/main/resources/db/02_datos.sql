@@ -18,7 +18,7 @@ INSERT INTO TipoTransporte (nombreTipoTransporte) VALUES ('AVION'), ('BUS'), ('T
 INSERT INTO TipoTrayecto (nombreTipoTrayecto) VALUES ('IDA'), ('VUELTA');
 
 -- ---------------- Ubicación ----------------
-INSERT INTO Pais (nombrePais) VALUES ('Colombia'), ('España'), ('Francia'), ('Reino Unido'), ('Italia'), ('Países Bajos'), ('Alemania'), ('Portugal'), ('Bélgica'), ('Austria'), ('Suiza'), ('Grecia'), ('Irlanda'), ('República Checa'), ('Hungría'), ('Polonia'), ('Dinamarca'), ('Suecia'), ('Noruega'), ('Finlandia'), ('Turquía'), ('Islandia');
+INSERT INTO Pais (nombrePais, indicativo) VALUES ('Colombia', '+57'), ('España', '+34'), ('Francia', '+33'), ('Reino Unido', '+44'), ('Italia', '+39'), ('Países Bajos', '+31'), ('Alemania', '+49'), ('Portugal', '+351'), ('Bélgica', '+32'), ('Austria', '+43'), ('Suiza', '+41'), ('Grecia', '+30'), ('Irlanda', '+353'), ('República Checa', '+420'), ('Hungría', '+36'), ('Polonia', '+48'), ('Dinamarca', '+45'), ('Suecia', '+46'), ('Noruega', '+47'), ('Finlandia', '+358'), ('Turquía', '+90'), ('Islandia', '+354');
 INSERT INTO Departamento (nombreDepartamento, idPais)
 SELECT x.nombre, p.idPais FROM (
 SELECT 'Amazonas' AS nombre, 'Colombia' AS pais

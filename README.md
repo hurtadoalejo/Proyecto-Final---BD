@@ -27,6 +27,7 @@ Los scripts siguen las 29 tablas y columnas del modelo de Data Modeler, con esto
 | C6 | UNIQUE en `Usuario.correo` y `Usuario.identificacion` | No se puede registrar dos veces |
 | C7 | `Notificacion.idOferta` admite NULL | No toda notificación es de una oferta |
 | C8 | `Usuario.indicativoPais` VARCHAR(5) | El registro envía el indicativo (+57) en un campo aparte |
+| C9 | `Pais.indicativo` VARCHAR(5) | Lista de indicativos para el select del registro |
 
 ## Estructura
 

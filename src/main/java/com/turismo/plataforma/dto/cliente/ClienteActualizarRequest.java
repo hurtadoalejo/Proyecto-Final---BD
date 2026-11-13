@@ -3,6 +3,8 @@ package com.turismo.plataforma.dto.cliente;
 import com.turismo.plataforma.dto.usuario.DatosPersonales;
 import jakarta.validation.constraints.*;
 
+import java.time.LocalDate;
+
 /** Modificación de los datos de un cliente (sin contraseña). */
 public record ClienteActualizarRequest(
         @NotBlank(message = "El tipo de identificación es obligatorio (CC, CE, TI, PA, PEP)")
@@ -25,6 +27,10 @@ public record ClienteActualizarRequest(
 
         @Size(max = 20, message = "Máximo 20 caracteres")
         String segundoApellido,
+
+        @NotNull(message = "La fecha de nacimiento es obligatoria (formato 2000-05-31)")
+        @Past(message = "La fecha de nacimiento debe ser una fecha pasada")
+        LocalDate fechaNacimiento,
 
         @NotNull(message = "El país es obligatorio (id de /api/catalogos/paises)")
         Long pais,

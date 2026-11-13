@@ -13,6 +13,7 @@
 --   [C6] UNIQUE en Usuario.correo y Usuario.identificacion.
 --   [C7] Notificacion.idOferta pasa a ser opcional (recordatorios sin oferta).
 --   [C8] Usuario.indicativoPais (nuevo): el registro del frontend lo envía aparte del celular.
+--   [C9] Pais.indicativo (nuevo): indicativo telefónico de cada país, para el select del registro.
 -- =====================================================================
 
 DROP DATABASE IF EXISTS turismo_db;
@@ -91,6 +92,7 @@ CREATE TABLE TipoTrayecto (
 CREATE TABLE Pais (
     idPais      BIGINT       NOT NULL AUTO_INCREMENT,
     nombrePais  VARCHAR(25)  NOT NULL,
+    indicativo  VARCHAR(5)   NOT NULL,   -- [C9] indicativo telefónico (+57)
     CONSTRAINT Pais_PK PRIMARY KEY (idPais),
     CONSTRAINT Pais_nombre_UK UNIQUE (nombrePais)
 );

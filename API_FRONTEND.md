@@ -10,7 +10,17 @@ No hay token: el login valida correo y contraseña y devuelve los datos del usua
 
 ## 1. Registro – `POST /api/auth/registro`
 
-Mismo JSON del formulario. `pais`, `departamento` y `ciudad` son **ids** de las listas de `/api/catalogos` (ver sección 4). `segundoNombre` y `segundoApellido` pueden ir en `null`. `indicativoPais` se guarda en su propia columna.
+Mismo JSON del formulario, más `fechaNacimiento` (datepicker, formato `"AAAA-MM-DD"`). `segundoNombre` y `segundoApellido` pueden ir en `null`.
+
+Campos que son **select** (el front envía lo que eligió el usuario):
+
+| Campo | Opciones de | Se envía |
+|---|---|---|
+| `tipoIdentificacion` | `GET /api/catalogos/tipos-identificacion` | `nombre` (ej. `"CC"`) |
+| `pais` | `GET /api/catalogos/paises` | `id` |
+| `departamento` | `GET /api/catalogos/paises/{idPais}/departamentos` (se carga al elegir país) | `id` |
+| `ciudad` | `GET /api/catalogos/departamentos/{idDepartamento}/ciudades` (se carga al elegir departamento) | `id` |
+| `indicativoPais` | `GET /api/catalogos/indicativos` → mostrar `"+57 Colombia"` | `indicativo` (ej. `"+57"`) |
 
 ```json
 {
@@ -20,6 +30,7 @@ Mismo JSON del formulario. `pais`, `departamento` y `ciudad` son **ids** de las 
   "segundoNombre": null,
   "primerApellido": "Pérez",
   "segundoApellido": null,
+  "fechaNacimiento": "2000-05-31",
   "pais": 1,
   "departamento": 25,
   "ciudad": 3,
@@ -31,7 +42,7 @@ Mismo JSON del formulario. `pais`, `departamento` y `ciudad` son **ids** de las 
 }
 ```
 
-Validaciones: `tipoIdentificacion` ∈ CC, CE, TI, PA, PEP · nombres máx. 20 · `indicativoPais` con formato `+57` · `telefonoCelular` de 7 a 15 dígitos sin espacios · `contrasenia` de 8 a 72 caracteres · la ciudad debe pertenecer al departamento y el departamento al país.
+Validaciones: `tipoIdentificacion` ∈ CC, CE, TI, PA, PEP · nombres máx. 20 · `fechaNacimiento` obligatoria y en el pasado · `indicativoPais` con formato `+57` · `telefonoCelular` de 7 a 15 dígitos sin espacios · `contrasenia` de 8 a 72 caracteres · la ciudad debe pertenecer al departamento y el departamento al país.
 
 **201 Created**
 
@@ -42,6 +53,7 @@ Validaciones: `tipoIdentificacion` ∈ CC, CE, TI, PA, PEP · nombres máx. 20 �
   "numeroIdentificacion": "1094912345",
   "primerNombre": "Juan", "segundoNombre": null,
   "primerApellido": "Pérez", "segundoApellido": null,
+  "fechaNacimiento": "2000-05-31",
   "pais": 1, "nombrePais": "Colombia",
   "departamento": 25, "nombreDepartamento": "Quindío",
   "ciudad": 3, "nombreCiudad": "Armenia",
@@ -129,6 +141,7 @@ Hay salidas todos los días desde el 13-nov-2026 hasta el 31-ene-2027: avión 06
 | Endpoint | Devuelve |
 |---|---|
 | `/api/catalogos/paises` | `[{ "id": 1, "nombre": "Colombia" }, ...]` |
+| `/api/catalogos/indicativos` | `[{ "idPais": 1, "nombrePais": "Colombia", "indicativo": "+57" }, ...]` |
 | `/api/catalogos/paises/{idPais}/departamentos` | `[{ "id": 25, "nombre": "Quindío" }, ...]` |
 | `/api/catalogos/departamentos/{idDepartamento}/ciudades` | `[{ "id": 3, "nombre": "Armenia" }, ...]` |
 | `/api/catalogos/ciudades-destino` | ciudades con código para la búsqueda: `[{ "idCiudad", "nombreCiudad", "codigoCiudad": "MAD", "idDepartamento", "nombreDepartamento", "idPais", "nombrePais" }]` |
