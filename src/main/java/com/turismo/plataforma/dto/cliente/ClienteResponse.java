@@ -1,18 +1,37 @@
 package com.turismo.plataforma.dto.cliente;
 
-import com.turismo.plataforma.model.Cliente;
-import com.turismo.plataforma.model.NombreCompleto;
+import com.turismo.plataforma.model.Usuario;
+import com.turismo.plataforma.model.ubicacion.Ciudad;
+import com.turismo.plataforma.model.ubicacion.Departamento;
 
-import java.time.LocalDate;
+/** Datos de un cliente (mismos nombres de campo del registro). Nunca incluye la contraseña. */
+public record ClienteResponse(Long idUsuario, String tipoIdentificacion, String numeroIdentificacion,
+                              String primerNombre, String segundoNombre, String primerApellido,
+                              String segundoApellido, Long pais, String nombrePais, Long departamento,
+                              String nombreDepartamento, Long ciudad, String nombreCiudad, String direccion,
+                              String indicativoPais, String telefonoCelular, String correo, String rol) {
 
-public record ClienteResponse(Long idUsuario, String primerNombre, String segundoNombre,
-                              String primerApellido, String segundoApellido, String identificacion,
-                              LocalDate fechaNacimiento, String direccion, String telefono, String correo) {
-
-    public static ClienteResponse from(Cliente cliente) {
-        NombreCompleto nombre = cliente.getNombre();
-        return new ClienteResponse(cliente.getIdUsuario(), nombre.getPrimerNombre(), nombre.getSegundoNombre(),
-                nombre.getPrimerApellido(), nombre.getSegundoApellido(), cliente.getIdentificacion(),
-                cliente.getFechaNacimiento(), cliente.getDireccion(), cliente.getTelefono(), cliente.getCorreo());
+    public static ClienteResponse from(Usuario usuario) {
+        Ciudad ciudad = usuario.getCiudad();
+        Departamento departamento = ciudad.getDepartamento();
+        return new ClienteResponse(
+                usuario.getIdUsuario(),
+                usuario.getTipoIdentificacion().getNombreIdentificacion(),
+                usuario.getIdentificacion(),
+                usuario.getNombre().getPrimerNombre(),
+                usuario.getNombre().getSegundoNombre(),
+                usuario.getNombre().getPrimerApellido(),
+                usuario.getNombre().getSegundoApellido(),
+                departamento.getPais().getIdPais(),
+                departamento.getPais().getNombrePais(),
+                departamento.getIdDepartamento(),
+                departamento.getNombreDepartamento(),
+                ciudad.getIdCiudad(),
+                ciudad.getNombreCiudad(),
+                usuario.getDireccion(),
+                usuario.getIndicativoPais(),
+                usuario.getTelefono(),
+                usuario.getCorreo(),
+                usuario.getRol().getNombreRol());
     }
 }

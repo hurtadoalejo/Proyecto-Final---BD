@@ -1,10 +1,9 @@
 package com.turismo.plataforma.dto.pago;
 
-import com.turismo.plataforma.model.enums.MetodoPago;
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.NotBlank;
 
-/** El frontend solo elige el metodo: el monto lo calcula el servidor a partir de la reserva. */
+/** metodoPago: un nombre de GET /api/catalogos/metodos-pago (ej.: TARJETA_CREDITO). */
 public record PagoRequest(
-        @NotNull(message = "El método de pago es obligatorio (TARJETA_CREDITO, TARJETA_DEBITO o PSE)")
-        MetodoPago metodoPago) {
+        @NotBlank(message = "El método de pago es obligatorio")
+        String metodoPago) {
 }

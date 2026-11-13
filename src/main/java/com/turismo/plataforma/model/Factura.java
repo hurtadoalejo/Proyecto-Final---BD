@@ -1,28 +1,27 @@
 package com.turismo.plataforma.model;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
 
+/** Entidad débil de Transaccion: comparte la PK (que es la de la reserva). */
 @Entity
-@Table(name = "factura")
+@Table(name = "Factura")
 @Getter @Setter @NoArgsConstructor
 public class Factura {
 
     @Id
-    @Column(name = "id_reserva")
+    @Column(name = "idReserva")
     private Long idReserva;
 
     @MapsId
     @OneToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "id_reserva")
+    @JoinColumn(name = "idReserva")
     private Transaccion transaccion;
 
-    @NotNull
-    @Column(name = "fecha_emision", nullable = false)
+    @Column(name = "fechaEmision", nullable = false)
     private LocalDateTime fechaEmision = LocalDateTime.now();
 }

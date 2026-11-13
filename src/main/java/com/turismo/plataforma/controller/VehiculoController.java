@@ -14,38 +14,37 @@ import java.util.List;
 @RequestMapping("/api/vehiculos")
 public class VehiculoController {
 
-    private final VehiculoService vehiculoService;
+    private final VehiculoService servicio;
 
-    public VehiculoController(VehiculoService vehiculoService) {
-        this.vehiculoService = vehiculoService;
+    public VehiculoController(VehiculoService servicio) {
+        this.servicio = servicio;
     }
 
-
+    /** Filtro opcional ?q= */
     @GetMapping
     public List<VehiculoResponse> listar(@RequestParam(name = "q", required = false) String q) {
-        return vehiculoService.listar(q);
+        return servicio.listar(q);
     }
 
     @GetMapping("/{id}")
     public VehiculoResponse obtener(@PathVariable("id") Long id) {
-        return vehiculoService.obtener(id);
+        return servicio.obtener(id);
     }
 
     @PostMapping
     public ResponseEntity<VehiculoResponse> crear(@Valid @RequestBody VehiculoRequest request) {
-        VehiculoResponse creado = vehiculoService.crear(request);
+        VehiculoResponse creado = servicio.crear(request);
         return ResponseEntity.created(URI.create("/api/vehiculos/" + creado.idVehiculo())).body(creado);
     }
 
     @PutMapping("/{id}")
-    public VehiculoResponse actualizar(@PathVariable("id") Long id,
-                                       @Valid @RequestBody VehiculoRequest request) {
-        return vehiculoService.actualizar(id, request);
+    public VehiculoResponse actualizar(@PathVariable("id") Long id, @Valid @RequestBody VehiculoRequest request) {
+        return servicio.actualizar(id, request);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminar(@PathVariable("id") Long id) {
-        vehiculoService.eliminar(id);
+        servicio.eliminar(id);
         return ResponseEntity.noContent().build();
     }
 }

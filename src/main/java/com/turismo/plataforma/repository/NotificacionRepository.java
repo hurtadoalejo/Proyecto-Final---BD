@@ -10,17 +10,19 @@ import java.util.List;
 public interface NotificacionRepository extends JpaRepository<Notificacion, Long> {
 
     @Query("""
-           select n from Notificacion n
-             join fetch n.cliente
-             left join fetch n.cupon
+           select distinct n from Notificacion n
+             join fetch n.estadoNotificacion
+             left join fetch n.oferta
            order by n.idNotificacion desc
            """)
-    List<Notificacion> listarConClienteYCupon();
+    List<Notificacion> listar();
 
+    /** Notificaciones enviadas a un cliente (tabla ClienteNotificacion). */
     @Query("""
-           select n from Notificacion n
-             join fetch n.cliente c
-             left join fetch n.cupon
+           select distinct n from Notificacion n
+             join n.clientes c
+             join fetch n.estadoNotificacion
+             left join fetch n.oferta
            where c.idUsuario = :idCliente
            order by n.idNotificacion desc
            """)

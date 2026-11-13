@@ -14,37 +14,37 @@ import java.util.List;
 @RequestMapping("/api/notificaciones")
 public class NotificacionController {
 
-    private final NotificacionService notificacionService;
+    private final NotificacionService servicio;
 
-    public NotificacionController(NotificacionService notificacionService) {
-        this.notificacionService = notificacionService;
+    public NotificacionController(NotificacionService servicio) {
+        this.servicio = servicio;
     }
 
+    /** ?idCliente= opcional: notificaciones de un cliente. */
     @GetMapping
     public List<NotificacionResponse> listar(@RequestParam(name = "idCliente", required = false) Long idCliente) {
-        return notificacionService.listar(idCliente);
+        return servicio.listar(idCliente);
     }
 
     @GetMapping("/{id}")
     public NotificacionResponse obtener(@PathVariable("id") Long id) {
-        return notificacionService.obtener(id);
+        return servicio.obtener(id);
     }
 
     @PostMapping
     public ResponseEntity<NotificacionResponse> crear(@Valid @RequestBody NotificacionRequest request) {
-        NotificacionResponse creada = notificacionService.crear(request);
-        return ResponseEntity.created(URI.create("/api/notificaciones/" + creada.idNotificacion())).body(creada);
+        NotificacionResponse creado = servicio.crear(request);
+        return ResponseEntity.created(URI.create("/api/notificaciones/" + creado.idNotificacion())).body(creado);
     }
 
     @PutMapping("/{id}")
-    public NotificacionResponse actualizar(@PathVariable("id") Long id,
-                                           @Valid @RequestBody NotificacionRequest request) {
-        return notificacionService.actualizar(id, request);
+    public NotificacionResponse actualizar(@PathVariable("id") Long id, @Valid @RequestBody NotificacionRequest request) {
+        return servicio.actualizar(id, request);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> eliminar(@PathVariable("id") Long id) {
-        notificacionService.eliminar(id);
+        servicio.eliminar(id);
         return ResponseEntity.noContent().build();
     }
 }
