@@ -15,19 +15,18 @@ La guía de endpoints con los JSON para el frontend está en **[API_FRONTEND.md]
 
 ## Ajustes al modelo relacional
 
-Los scripts siguen las 29 tablas y columnas del modelo de Data Modeler, con estos ajustes:
+Los scripts siguen las 29 tablas, columnas y nombres de llaves del modelo de Data Modeler (versión del 13-nov-2026), con estos ajustes:
 
 | # | Ajuste | Motivo |
 |---|---|---|
-| C1 | `Usuario.contrasenia` VARCHAR(100) | Espacio suficiente para contraseñas largas |
-| C2 | DATETIME en `fechaHoraSalida`, `fechaReserva`, `fechaPago`, `fechaEnvio`, `fechaEmision` | Guardar fecha **y** hora |
-| C3 | DECIMAL en dinero y medidas (`precioBase`, `salario`, `distancia`, `porcentajeDescuento`...) | Evitar errores de redondeo |
-| C4 | `Ciudad.codigoCiudad` VARCHAR(3) UNIQUE | La búsqueda del front usa códigos (BOG, MAD...) |
-| C5 | Se quitó `Usuario_identificacion` de Cliente y Empleado | Dato repetido: ya está en Usuario |
-| C6 | UNIQUE en `Usuario.correo` y `Usuario.identificacion` | No se puede registrar dos veces |
-| C7 | `Notificacion.idOferta` admite NULL | No toda notificación es de una oferta |
-| C8 | `Usuario.indicativoPais` VARCHAR(5) | El registro envía el indicativo (+57) en un campo aparte |
-| C9 | `Pais.indicativo` VARCHAR(5) | Lista de indicativos para el select del registro |
+| C1 | DATETIME en `fechaHoraSalida`, `fechaReserva`, `fechaPago`, `fechaEnvio`, `fechaEmision` | Guardar fecha **y** hora |
+| C2 | DECIMAL en dinero y medidas (`precioBase`, `salario`, `distancia`, `porcentajeDescuento`...) | Evitar errores de redondeo |
+| C3 | `Ciudad.codigoCiudad` VARCHAR(3) UNIQUE | La búsqueda del front usa códigos (BOG, MAD...) |
+| C4 | UNIQUE en `Usuario.correo` y `Usuario.identificacion` | No se puede registrar dos veces |
+| C5 | `Notificacion.idOferta` admite NULL | No toda notificación es de una oferta |
+| C6 | `nombreDepartamento` y `nombreCiudad` VARCHAR(40) | El registro tiene nombres de hasta 31 caracteres ("Ciudad Autónoma de Buenos Aires") |
+
+`Usuario.telefono` guarda indicativo y número juntos (`+57 3001234567`); `Pais.indicativo` guarda el indicativo de cada país (57, 1, 34...).
 
 ## Estructura
 

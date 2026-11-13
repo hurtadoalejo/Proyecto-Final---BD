@@ -6,16 +6,17 @@ import com.turismo.plataforma.model.ubicacion.Departamento;
 
 import java.time.LocalDate;
 
-/** Datos de un cliente (mismos nombres de campo del registro). Nunca incluye la contraseña. */
+/** Datos de un usuario con los mismos nombres de campo del formulario de registro. Nunca incluye la contraseña. */
 public record ClienteResponse(Long idUsuario, String tipoIdentificacion, String numeroIdentificacion,
                               String primerNombre, String segundoNombre, String primerApellido,
-                              String segundoApellido, LocalDate fechaNacimiento, Long pais, String nombrePais, Long departamento,
-                              String nombreDepartamento, Long ciudad, String nombreCiudad, String direccion,
-                              String indicativoPais, String telefonoCelular, String correo, String rol) {
+                              String segundoApellido, LocalDate fechaNacimiento, String pais,
+                              String departamento, String ciudad, String direccion, String indicativo,
+                              String telefono, String correo, String rol) {
 
     public static ClienteResponse from(Usuario usuario) {
         Ciudad ciudad = usuario.getCiudad();
         Departamento departamento = ciudad.getDepartamento();
+        String[] telefono = separarTelefono(usuario.getTelefono());
         return new ClienteResponse(
                 usuario.getIdUsuario(),
                 usuario.getTipoIdentificacion().getNombreIdentificacion(),
@@ -25,16 +26,25 @@ public record ClienteResponse(Long idUsuario, String tipoIdentificacion, String 
                 usuario.getNombre().getPrimerApellido(),
                 usuario.getNombre().getSegundoApellido(),
                 usuario.getFechaNacimiento(),
-                departamento.getPais().getIdPais(),
                 departamento.getPais().getNombrePais(),
-                departamento.getIdDepartamento(),
                 departamento.getNombreDepartamento(),
-                ciudad.getIdCiudad(),
                 ciudad.getNombreCiudad(),
                 usuario.getDireccion(),
-                usuario.getIndicativoPais(),
-                usuario.getTelefono(),
+                telefono[0],
+                telefono[1],
                 usuario.getCorreo(),
                 usuario.getRol().getNombreRol());
+    }
+
+    /** "+57 3001234567" -> ["+57", "3001234567"]. */
+    private static String[] separarTelefono(String telefono) {
+        if (telefono == null) {
+            return new String[]{null, null};
+        }
+        int espacio = telefono.indexOf(' ');
+        if (telefono.startsWith("+") && espacio > 0) {
+            return new String[]{telefono.substring(0, espacio), telefono.substring(espacio + 1)};
+        }
+        return new String[]{null, telefono};
     }
 }

@@ -1,7 +1,7 @@
 -- =====================================================================
 --  Datos iniciales. Ejecutar DESPUÉS de 01_esquema.sql.
 --  Usuarios: no se insertan aquí. Al arrancar, la aplicación crea la
---  administradora (admin@viajacol.com) con la contraseña cifrada; los
+--  administradora (admin@viajacol.com); los
 --  clientes se registran desde el frontend (POST /api/auth/registro).
 -- =====================================================================
 USE turismo_db;
@@ -18,7 +18,8 @@ INSERT INTO TipoTransporte (nombreTipoTransporte) VALUES ('AVION'), ('BUS'), ('T
 INSERT INTO TipoTrayecto (nombreTipoTrayecto) VALUES ('IDA'), ('VUELTA');
 
 -- ---------------- Ubicación ----------------
-INSERT INTO Pais (nombrePais, indicativo) VALUES ('Colombia', '+57'), ('España', '+34'), ('Francia', '+33'), ('Reino Unido', '+44'), ('Italia', '+39'), ('Países Bajos', '+31'), ('Alemania', '+49'), ('Portugal', '+351'), ('Bélgica', '+32'), ('Austria', '+43'), ('Suiza', '+41'), ('Grecia', '+30'), ('Irlanda', '+353'), ('República Checa', '+420'), ('Hungría', '+36'), ('Polonia', '+48'), ('Dinamarca', '+45'), ('Suecia', '+46'), ('Noruega', '+47'), ('Finlandia', '+358'), ('Turquía', '+90'), ('Islandia', '+354');
+-- Incluye los 8 países, 80 departamentos y 160 ciudades del formulario de registro del frontend.
+INSERT INTO Pais (nombrePais, indicativo) VALUES ('Colombia', 57), ('España', 34), ('Francia', 33), ('Reino Unido', 44), ('Italia', 39), ('Países Bajos', 31), ('Alemania', 49), ('Portugal', 351), ('Bélgica', 32), ('Austria', 43), ('Suiza', 41), ('Grecia', 30), ('Irlanda', 353), ('República Checa', 420), ('Hungría', 36), ('Polonia', 48), ('Dinamarca', 45), ('Suecia', 46), ('Noruega', 47), ('Finlandia', 358), ('Turquía', 90), ('Islandia', 354), ('Estados Unidos', 1), ('México', 52), ('Argentina', 54), ('Chile', 56), ('Perú', 51), ('Ecuador', 593);
 INSERT INTO Departamento (nombreDepartamento, idPais)
 SELECT x.nombre, p.idPais FROM (
 SELECT 'Amazonas' AS nombre, 'Colombia' AS pais
@@ -85,6 +86,74 @@ SELECT 'Amazonas' AS nombre, 'Colombia' AS pais
   UNION ALL SELECT 'Uusimaa' AS nombre, 'Finlandia' AS pais
   UNION ALL SELECT 'Estambul' AS nombre, 'Turquía' AS pais
   UNION ALL SELECT 'Región Capital' AS nombre, 'Islandia' AS pais
+  UNION ALL SELECT 'California' AS nombre, 'Estados Unidos' AS pais
+  UNION ALL SELECT 'Texas' AS nombre, 'Estados Unidos' AS pais
+  UNION ALL SELECT 'Florida' AS nombre, 'Estados Unidos' AS pais
+  UNION ALL SELECT 'Nueva York' AS nombre, 'Estados Unidos' AS pais
+  UNION ALL SELECT 'Illinois' AS nombre, 'Estados Unidos' AS pais
+  UNION ALL SELECT 'Pensilvania' AS nombre, 'Estados Unidos' AS pais
+  UNION ALL SELECT 'Ohio' AS nombre, 'Estados Unidos' AS pais
+  UNION ALL SELECT 'Georgia' AS nombre, 'Estados Unidos' AS pais
+  UNION ALL SELECT 'Carolina del Norte' AS nombre, 'Estados Unidos' AS pais
+  UNION ALL SELECT 'Míchigan' AS nombre, 'Estados Unidos' AS pais
+  UNION ALL SELECT 'Andalucía' AS nombre, 'España' AS pais
+  UNION ALL SELECT 'Comunidad Valenciana' AS nombre, 'España' AS pais
+  UNION ALL SELECT 'Galicia' AS nombre, 'España' AS pais
+  UNION ALL SELECT 'Castilla y León' AS nombre, 'España' AS pais
+  UNION ALL SELECT 'País Vasco' AS nombre, 'España' AS pais
+  UNION ALL SELECT 'Canarias' AS nombre, 'España' AS pais
+  UNION ALL SELECT 'Castilla-La Mancha' AS nombre, 'España' AS pais
+  UNION ALL SELECT 'Aragón' AS nombre, 'España' AS pais
+  UNION ALL SELECT 'Ciudad de México' AS nombre, 'México' AS pais
+  UNION ALL SELECT 'Jalisco' AS nombre, 'México' AS pais
+  UNION ALL SELECT 'Nuevo León' AS nombre, 'México' AS pais
+  UNION ALL SELECT 'Puebla' AS nombre, 'México' AS pais
+  UNION ALL SELECT 'Guanajuato' AS nombre, 'México' AS pais
+  UNION ALL SELECT 'Estado de México' AS nombre, 'México' AS pais
+  UNION ALL SELECT 'Veracruz' AS nombre, 'México' AS pais
+  UNION ALL SELECT 'Yucatán' AS nombre, 'México' AS pais
+  UNION ALL SELECT 'Quintana Roo' AS nombre, 'México' AS pais
+  UNION ALL SELECT 'Baja California' AS nombre, 'México' AS pais
+  UNION ALL SELECT 'Buenos Aires' AS nombre, 'Argentina' AS pais
+  UNION ALL SELECT 'Ciudad Autónoma de Buenos Aires' AS nombre, 'Argentina' AS pais
+  UNION ALL SELECT 'Córdoba' AS nombre, 'Argentina' AS pais
+  UNION ALL SELECT 'Santa Fe' AS nombre, 'Argentina' AS pais
+  UNION ALL SELECT 'Mendoza' AS nombre, 'Argentina' AS pais
+  UNION ALL SELECT 'Tucumán' AS nombre, 'Argentina' AS pais
+  UNION ALL SELECT 'Salta' AS nombre, 'Argentina' AS pais
+  UNION ALL SELECT 'Entre Ríos' AS nombre, 'Argentina' AS pais
+  UNION ALL SELECT 'Misiones' AS nombre, 'Argentina' AS pais
+  UNION ALL SELECT 'Chaco' AS nombre, 'Argentina' AS pais
+  UNION ALL SELECT 'Región Metropolitana' AS nombre, 'Chile' AS pais
+  UNION ALL SELECT 'Valparaíso' AS nombre, 'Chile' AS pais
+  UNION ALL SELECT 'Biobío' AS nombre, 'Chile' AS pais
+  UNION ALL SELECT 'La Araucanía' AS nombre, 'Chile' AS pais
+  UNION ALL SELECT 'Los Lagos' AS nombre, 'Chile' AS pais
+  UNION ALL SELECT 'Antofagasta' AS nombre, 'Chile' AS pais
+  UNION ALL SELECT 'Coquimbo' AS nombre, 'Chile' AS pais
+  UNION ALL SELECT 'O''Higgins' AS nombre, 'Chile' AS pais
+  UNION ALL SELECT 'Maule' AS nombre, 'Chile' AS pais
+  UNION ALL SELECT 'Tarapacá' AS nombre, 'Chile' AS pais
+  UNION ALL SELECT 'Lima' AS nombre, 'Perú' AS pais
+  UNION ALL SELECT 'Arequipa' AS nombre, 'Perú' AS pais
+  UNION ALL SELECT 'La Libertad' AS nombre, 'Perú' AS pais
+  UNION ALL SELECT 'Piura' AS nombre, 'Perú' AS pais
+  UNION ALL SELECT 'Lambayeque' AS nombre, 'Perú' AS pais
+  UNION ALL SELECT 'Cusco' AS nombre, 'Perú' AS pais
+  UNION ALL SELECT 'Junín' AS nombre, 'Perú' AS pais
+  UNION ALL SELECT 'Áncash' AS nombre, 'Perú' AS pais
+  UNION ALL SELECT 'Loreto' AS nombre, 'Perú' AS pais
+  UNION ALL SELECT 'Ica' AS nombre, 'Perú' AS pais
+  UNION ALL SELECT 'Pichincha' AS nombre, 'Ecuador' AS pais
+  UNION ALL SELECT 'Guayas' AS nombre, 'Ecuador' AS pais
+  UNION ALL SELECT 'Azuay' AS nombre, 'Ecuador' AS pais
+  UNION ALL SELECT 'Manabí' AS nombre, 'Ecuador' AS pais
+  UNION ALL SELECT 'El Oro' AS nombre, 'Ecuador' AS pais
+  UNION ALL SELECT 'Tungurahua' AS nombre, 'Ecuador' AS pais
+  UNION ALL SELECT 'Loja' AS nombre, 'Ecuador' AS pais
+  UNION ALL SELECT 'Imbabura' AS nombre, 'Ecuador' AS pais
+  UNION ALL SELECT 'Chimborazo' AS nombre, 'Ecuador' AS pais
+  UNION ALL SELECT 'Esmeraldas' AS nombre, 'Ecuador' AS pais
 ) x JOIN Pais p ON p.nombrePais = x.pais;
 INSERT INTO Ciudad (nombreCiudad, codigoCiudad, idDepartamento)
 SELECT x.nombre, x.codigo, d.idDepartamento FROM (
@@ -167,6 +236,147 @@ SELECT 'Leticia' AS nombre, 'LET' AS codigo, 'Amazonas' AS depto, 'Colombia' AS 
   UNION ALL SELECT 'Helsinki' AS nombre, 'HEL' AS codigo, 'Uusimaa' AS depto, 'Finlandia' AS pais
   UNION ALL SELECT 'Estambul' AS nombre, 'IST' AS codigo, 'Estambul' AS depto, 'Turquía' AS pais
   UNION ALL SELECT 'Reikiavik' AS nombre, 'REK' AS codigo, 'Región Capital' AS depto, 'Islandia' AS pais
+  UNION ALL SELECT 'Usaquén' AS nombre, NULL AS codigo, 'Bogotá D.C.' AS depto, 'Colombia' AS pais
+  UNION ALL SELECT 'Magangué' AS nombre, NULL AS codigo, 'Bolívar' AS depto, 'Colombia' AS pais
+  UNION ALL SELECT 'Villamaría' AS nombre, NULL AS codigo, 'Caldas' AS depto, 'Colombia' AS pais
+  UNION ALL SELECT 'Los Ángeles' AS nombre, NULL AS codigo, 'California' AS depto, 'Estados Unidos' AS pais
+  UNION ALL SELECT 'San Francisco' AS nombre, NULL AS codigo, 'California' AS depto, 'Estados Unidos' AS pais
+  UNION ALL SELECT 'Houston' AS nombre, NULL AS codigo, 'Texas' AS depto, 'Estados Unidos' AS pais
+  UNION ALL SELECT 'Austin' AS nombre, NULL AS codigo, 'Texas' AS depto, 'Estados Unidos' AS pais
+  UNION ALL SELECT 'Miami' AS nombre, NULL AS codigo, 'Florida' AS depto, 'Estados Unidos' AS pais
+  UNION ALL SELECT 'Orlando' AS nombre, NULL AS codigo, 'Florida' AS depto, 'Estados Unidos' AS pais
+  UNION ALL SELECT 'Nueva York' AS nombre, NULL AS codigo, 'Nueva York' AS depto, 'Estados Unidos' AS pais
+  UNION ALL SELECT 'Búfalo' AS nombre, NULL AS codigo, 'Nueva York' AS depto, 'Estados Unidos' AS pais
+  UNION ALL SELECT 'Chicago' AS nombre, NULL AS codigo, 'Illinois' AS depto, 'Estados Unidos' AS pais
+  UNION ALL SELECT 'Aurora' AS nombre, NULL AS codigo, 'Illinois' AS depto, 'Estados Unidos' AS pais
+  UNION ALL SELECT 'Filadelfia' AS nombre, NULL AS codigo, 'Pensilvania' AS depto, 'Estados Unidos' AS pais
+  UNION ALL SELECT 'Pittsburgh' AS nombre, NULL AS codigo, 'Pensilvania' AS depto, 'Estados Unidos' AS pais
+  UNION ALL SELECT 'Columbus' AS nombre, NULL AS codigo, 'Ohio' AS depto, 'Estados Unidos' AS pais
+  UNION ALL SELECT 'Cleveland' AS nombre, NULL AS codigo, 'Ohio' AS depto, 'Estados Unidos' AS pais
+  UNION ALL SELECT 'Atlanta' AS nombre, NULL AS codigo, 'Georgia' AS depto, 'Estados Unidos' AS pais
+  UNION ALL SELECT 'Savannah' AS nombre, NULL AS codigo, 'Georgia' AS depto, 'Estados Unidos' AS pais
+  UNION ALL SELECT 'Charlotte' AS nombre, NULL AS codigo, 'Carolina del Norte' AS depto, 'Estados Unidos' AS pais
+  UNION ALL SELECT 'Raleigh' AS nombre, NULL AS codigo, 'Carolina del Norte' AS depto, 'Estados Unidos' AS pais
+  UNION ALL SELECT 'Detroit' AS nombre, NULL AS codigo, 'Míchigan' AS depto, 'Estados Unidos' AS pais
+  UNION ALL SELECT 'Grand Rapids' AS nombre, NULL AS codigo, 'Míchigan' AS depto, 'Estados Unidos' AS pais
+  UNION ALL SELECT 'Sevilla' AS nombre, NULL AS codigo, 'Andalucía' AS depto, 'España' AS pais
+  UNION ALL SELECT 'Málaga' AS nombre, NULL AS codigo, 'Andalucía' AS depto, 'España' AS pais
+  UNION ALL SELECT 'Girona' AS nombre, NULL AS codigo, 'Cataluña' AS depto, 'España' AS pais
+  UNION ALL SELECT 'Alcalá de Henares' AS nombre, NULL AS codigo, 'Comunidad de Madrid' AS depto, 'España' AS pais
+  UNION ALL SELECT 'Valencia' AS nombre, NULL AS codigo, 'Comunidad Valenciana' AS depto, 'España' AS pais
+  UNION ALL SELECT 'Alicante' AS nombre, NULL AS codigo, 'Comunidad Valenciana' AS depto, 'España' AS pais
+  UNION ALL SELECT 'Vigo' AS nombre, NULL AS codigo, 'Galicia' AS depto, 'España' AS pais
+  UNION ALL SELECT 'A Coruña' AS nombre, NULL AS codigo, 'Galicia' AS depto, 'España' AS pais
+  UNION ALL SELECT 'Valladolid' AS nombre, NULL AS codigo, 'Castilla y León' AS depto, 'España' AS pais
+  UNION ALL SELECT 'Salamanca' AS nombre, NULL AS codigo, 'Castilla y León' AS depto, 'España' AS pais
+  UNION ALL SELECT 'Bilbao' AS nombre, NULL AS codigo, 'País Vasco' AS depto, 'España' AS pais
+  UNION ALL SELECT 'San Sebastián' AS nombre, NULL AS codigo, 'País Vasco' AS depto, 'España' AS pais
+  UNION ALL SELECT 'Las Palmas' AS nombre, NULL AS codigo, 'Canarias' AS depto, 'España' AS pais
+  UNION ALL SELECT 'Santa Cruz de Tenerife' AS nombre, NULL AS codigo, 'Canarias' AS depto, 'España' AS pais
+  UNION ALL SELECT 'Toledo' AS nombre, NULL AS codigo, 'Castilla-La Mancha' AS depto, 'España' AS pais
+  UNION ALL SELECT 'Albacete' AS nombre, NULL AS codigo, 'Castilla-La Mancha' AS depto, 'España' AS pais
+  UNION ALL SELECT 'Zaragoza' AS nombre, NULL AS codigo, 'Aragón' AS depto, 'España' AS pais
+  UNION ALL SELECT 'Huesca' AS nombre, NULL AS codigo, 'Aragón' AS depto, 'España' AS pais
+  UNION ALL SELECT 'Ciudad de México' AS nombre, NULL AS codigo, 'Ciudad de México' AS depto, 'México' AS pais
+  UNION ALL SELECT 'Coyoacán' AS nombre, NULL AS codigo, 'Ciudad de México' AS depto, 'México' AS pais
+  UNION ALL SELECT 'Guadalajara' AS nombre, NULL AS codigo, 'Jalisco' AS depto, 'México' AS pais
+  UNION ALL SELECT 'Zapopan' AS nombre, NULL AS codigo, 'Jalisco' AS depto, 'México' AS pais
+  UNION ALL SELECT 'Monterrey' AS nombre, NULL AS codigo, 'Nuevo León' AS depto, 'México' AS pais
+  UNION ALL SELECT 'San Pedro Garza García' AS nombre, NULL AS codigo, 'Nuevo León' AS depto, 'México' AS pais
+  UNION ALL SELECT 'Puebla' AS nombre, NULL AS codigo, 'Puebla' AS depto, 'México' AS pais
+  UNION ALL SELECT 'Tehuacán' AS nombre, NULL AS codigo, 'Puebla' AS depto, 'México' AS pais
+  UNION ALL SELECT 'León' AS nombre, NULL AS codigo, 'Guanajuato' AS depto, 'México' AS pais
+  UNION ALL SELECT 'Irapuato' AS nombre, NULL AS codigo, 'Guanajuato' AS depto, 'México' AS pais
+  UNION ALL SELECT 'Toluca' AS nombre, NULL AS codigo, 'Estado de México' AS depto, 'México' AS pais
+  UNION ALL SELECT 'Ecatepec' AS nombre, NULL AS codigo, 'Estado de México' AS depto, 'México' AS pais
+  UNION ALL SELECT 'Veracruz' AS nombre, NULL AS codigo, 'Veracruz' AS depto, 'México' AS pais
+  UNION ALL SELECT 'Xalapa' AS nombre, NULL AS codigo, 'Veracruz' AS depto, 'México' AS pais
+  UNION ALL SELECT 'Mérida' AS nombre, NULL AS codigo, 'Yucatán' AS depto, 'México' AS pais
+  UNION ALL SELECT 'Valladolid' AS nombre, NULL AS codigo, 'Yucatán' AS depto, 'México' AS pais
+  UNION ALL SELECT 'Cancún' AS nombre, NULL AS codigo, 'Quintana Roo' AS depto, 'México' AS pais
+  UNION ALL SELECT 'Playa del Carmen' AS nombre, NULL AS codigo, 'Quintana Roo' AS depto, 'México' AS pais
+  UNION ALL SELECT 'Tijuana' AS nombre, NULL AS codigo, 'Baja California' AS depto, 'México' AS pais
+  UNION ALL SELECT 'Mexicali' AS nombre, NULL AS codigo, 'Baja California' AS depto, 'México' AS pais
+  UNION ALL SELECT 'La Plata' AS nombre, NULL AS codigo, 'Buenos Aires' AS depto, 'Argentina' AS pais
+  UNION ALL SELECT 'Mar del Plata' AS nombre, NULL AS codigo, 'Buenos Aires' AS depto, 'Argentina' AS pais
+  UNION ALL SELECT 'Buenos Aires' AS nombre, NULL AS codigo, 'Ciudad Autónoma de Buenos Aires' AS depto, 'Argentina' AS pais
+  UNION ALL SELECT 'Palermo' AS nombre, NULL AS codigo, 'Ciudad Autónoma de Buenos Aires' AS depto, 'Argentina' AS pais
+  UNION ALL SELECT 'Córdoba' AS nombre, NULL AS codigo, 'Córdoba' AS depto, 'Argentina' AS pais
+  UNION ALL SELECT 'Villa Carlos Paz' AS nombre, NULL AS codigo, 'Córdoba' AS depto, 'Argentina' AS pais
+  UNION ALL SELECT 'Rosario' AS nombre, NULL AS codigo, 'Santa Fe' AS depto, 'Argentina' AS pais
+  UNION ALL SELECT 'Santa Fe' AS nombre, NULL AS codigo, 'Santa Fe' AS depto, 'Argentina' AS pais
+  UNION ALL SELECT 'Mendoza' AS nombre, NULL AS codigo, 'Mendoza' AS depto, 'Argentina' AS pais
+  UNION ALL SELECT 'San Rafael' AS nombre, NULL AS codigo, 'Mendoza' AS depto, 'Argentina' AS pais
+  UNION ALL SELECT 'San Miguel de Tucumán' AS nombre, NULL AS codigo, 'Tucumán' AS depto, 'Argentina' AS pais
+  UNION ALL SELECT 'Yerba Buena' AS nombre, NULL AS codigo, 'Tucumán' AS depto, 'Argentina' AS pais
+  UNION ALL SELECT 'Salta' AS nombre, NULL AS codigo, 'Salta' AS depto, 'Argentina' AS pais
+  UNION ALL SELECT 'San Ramón de la Nueva Orán' AS nombre, NULL AS codigo, 'Salta' AS depto, 'Argentina' AS pais
+  UNION ALL SELECT 'Paraná' AS nombre, NULL AS codigo, 'Entre Ríos' AS depto, 'Argentina' AS pais
+  UNION ALL SELECT 'Concordia' AS nombre, NULL AS codigo, 'Entre Ríos' AS depto, 'Argentina' AS pais
+  UNION ALL SELECT 'Posadas' AS nombre, NULL AS codigo, 'Misiones' AS depto, 'Argentina' AS pais
+  UNION ALL SELECT 'Puerto Iguazú' AS nombre, NULL AS codigo, 'Misiones' AS depto, 'Argentina' AS pais
+  UNION ALL SELECT 'Resistencia' AS nombre, NULL AS codigo, 'Chaco' AS depto, 'Argentina' AS pais
+  UNION ALL SELECT 'Presidencia Roque Sáenz Peña' AS nombre, NULL AS codigo, 'Chaco' AS depto, 'Argentina' AS pais
+  UNION ALL SELECT 'Santiago' AS nombre, NULL AS codigo, 'Región Metropolitana' AS depto, 'Chile' AS pais
+  UNION ALL SELECT 'Puente Alto' AS nombre, NULL AS codigo, 'Región Metropolitana' AS depto, 'Chile' AS pais
+  UNION ALL SELECT 'Valparaíso' AS nombre, NULL AS codigo, 'Valparaíso' AS depto, 'Chile' AS pais
+  UNION ALL SELECT 'Viña del Mar' AS nombre, NULL AS codigo, 'Valparaíso' AS depto, 'Chile' AS pais
+  UNION ALL SELECT 'Concepción' AS nombre, NULL AS codigo, 'Biobío' AS depto, 'Chile' AS pais
+  UNION ALL SELECT 'Talcahuano' AS nombre, NULL AS codigo, 'Biobío' AS depto, 'Chile' AS pais
+  UNION ALL SELECT 'Temuco' AS nombre, NULL AS codigo, 'La Araucanía' AS depto, 'Chile' AS pais
+  UNION ALL SELECT 'Villarrica' AS nombre, NULL AS codigo, 'La Araucanía' AS depto, 'Chile' AS pais
+  UNION ALL SELECT 'Puerto Montt' AS nombre, NULL AS codigo, 'Los Lagos' AS depto, 'Chile' AS pais
+  UNION ALL SELECT 'Osorno' AS nombre, NULL AS codigo, 'Los Lagos' AS depto, 'Chile' AS pais
+  UNION ALL SELECT 'Antofagasta' AS nombre, NULL AS codigo, 'Antofagasta' AS depto, 'Chile' AS pais
+  UNION ALL SELECT 'Calama' AS nombre, NULL AS codigo, 'Antofagasta' AS depto, 'Chile' AS pais
+  UNION ALL SELECT 'La Serena' AS nombre, NULL AS codigo, 'Coquimbo' AS depto, 'Chile' AS pais
+  UNION ALL SELECT 'Coquimbo' AS nombre, NULL AS codigo, 'Coquimbo' AS depto, 'Chile' AS pais
+  UNION ALL SELECT 'Rancagua' AS nombre, NULL AS codigo, 'O''Higgins' AS depto, 'Chile' AS pais
+  UNION ALL SELECT 'San Fernando' AS nombre, NULL AS codigo, 'O''Higgins' AS depto, 'Chile' AS pais
+  UNION ALL SELECT 'Talca' AS nombre, NULL AS codigo, 'Maule' AS depto, 'Chile' AS pais
+  UNION ALL SELECT 'Curicó' AS nombre, NULL AS codigo, 'Maule' AS depto, 'Chile' AS pais
+  UNION ALL SELECT 'Iquique' AS nombre, NULL AS codigo, 'Tarapacá' AS depto, 'Chile' AS pais
+  UNION ALL SELECT 'Alto Hospicio' AS nombre, NULL AS codigo, 'Tarapacá' AS depto, 'Chile' AS pais
+  UNION ALL SELECT 'Lima' AS nombre, NULL AS codigo, 'Lima' AS depto, 'Perú' AS pais
+  UNION ALL SELECT 'Miraflores' AS nombre, NULL AS codigo, 'Lima' AS depto, 'Perú' AS pais
+  UNION ALL SELECT 'Arequipa' AS nombre, NULL AS codigo, 'Arequipa' AS depto, 'Perú' AS pais
+  UNION ALL SELECT 'Camaná' AS nombre, NULL AS codigo, 'Arequipa' AS depto, 'Perú' AS pais
+  UNION ALL SELECT 'Trujillo' AS nombre, NULL AS codigo, 'La Libertad' AS depto, 'Perú' AS pais
+  UNION ALL SELECT 'Chepén' AS nombre, NULL AS codigo, 'La Libertad' AS depto, 'Perú' AS pais
+  UNION ALL SELECT 'Piura' AS nombre, NULL AS codigo, 'Piura' AS depto, 'Perú' AS pais
+  UNION ALL SELECT 'Sullana' AS nombre, NULL AS codigo, 'Piura' AS depto, 'Perú' AS pais
+  UNION ALL SELECT 'Chiclayo' AS nombre, NULL AS codigo, 'Lambayeque' AS depto, 'Perú' AS pais
+  UNION ALL SELECT 'Lambayeque' AS nombre, NULL AS codigo, 'Lambayeque' AS depto, 'Perú' AS pais
+  UNION ALL SELECT 'Cusco' AS nombre, NULL AS codigo, 'Cusco' AS depto, 'Perú' AS pais
+  UNION ALL SELECT 'Urubamba' AS nombre, NULL AS codigo, 'Cusco' AS depto, 'Perú' AS pais
+  UNION ALL SELECT 'Huancayo' AS nombre, NULL AS codigo, 'Junín' AS depto, 'Perú' AS pais
+  UNION ALL SELECT 'Tarma' AS nombre, NULL AS codigo, 'Junín' AS depto, 'Perú' AS pais
+  UNION ALL SELECT 'Chimbote' AS nombre, NULL AS codigo, 'Áncash' AS depto, 'Perú' AS pais
+  UNION ALL SELECT 'Huaraz' AS nombre, NULL AS codigo, 'Áncash' AS depto, 'Perú' AS pais
+  UNION ALL SELECT 'Iquitos' AS nombre, NULL AS codigo, 'Loreto' AS depto, 'Perú' AS pais
+  UNION ALL SELECT 'Yurimaguas' AS nombre, NULL AS codigo, 'Loreto' AS depto, 'Perú' AS pais
+  UNION ALL SELECT 'Ica' AS nombre, NULL AS codigo, 'Ica' AS depto, 'Perú' AS pais
+  UNION ALL SELECT 'Chincha Alta' AS nombre, NULL AS codigo, 'Ica' AS depto, 'Perú' AS pais
+  UNION ALL SELECT 'Quito' AS nombre, NULL AS codigo, 'Pichincha' AS depto, 'Ecuador' AS pais
+  UNION ALL SELECT 'Sangolquí' AS nombre, NULL AS codigo, 'Pichincha' AS depto, 'Ecuador' AS pais
+  UNION ALL SELECT 'Guayaquil' AS nombre, NULL AS codigo, 'Guayas' AS depto, 'Ecuador' AS pais
+  UNION ALL SELECT 'Durán' AS nombre, NULL AS codigo, 'Guayas' AS depto, 'Ecuador' AS pais
+  UNION ALL SELECT 'Cuenca' AS nombre, NULL AS codigo, 'Azuay' AS depto, 'Ecuador' AS pais
+  UNION ALL SELECT 'Gualaceo' AS nombre, NULL AS codigo, 'Azuay' AS depto, 'Ecuador' AS pais
+  UNION ALL SELECT 'Portoviejo' AS nombre, NULL AS codigo, 'Manabí' AS depto, 'Ecuador' AS pais
+  UNION ALL SELECT 'Manta' AS nombre, NULL AS codigo, 'Manabí' AS depto, 'Ecuador' AS pais
+  UNION ALL SELECT 'Machala' AS nombre, NULL AS codigo, 'El Oro' AS depto, 'Ecuador' AS pais
+  UNION ALL SELECT 'Pasaje' AS nombre, NULL AS codigo, 'El Oro' AS depto, 'Ecuador' AS pais
+  UNION ALL SELECT 'Ambato' AS nombre, NULL AS codigo, 'Tungurahua' AS depto, 'Ecuador' AS pais
+  UNION ALL SELECT 'Baños' AS nombre, NULL AS codigo, 'Tungurahua' AS depto, 'Ecuador' AS pais
+  UNION ALL SELECT 'Loja' AS nombre, NULL AS codigo, 'Loja' AS depto, 'Ecuador' AS pais
+  UNION ALL SELECT 'Catamayo' AS nombre, NULL AS codigo, 'Loja' AS depto, 'Ecuador' AS pais
+  UNION ALL SELECT 'Ibarra' AS nombre, NULL AS codigo, 'Imbabura' AS depto, 'Ecuador' AS pais
+  UNION ALL SELECT 'Otavalo' AS nombre, NULL AS codigo, 'Imbabura' AS depto, 'Ecuador' AS pais
+  UNION ALL SELECT 'Riobamba' AS nombre, NULL AS codigo, 'Chimborazo' AS depto, 'Ecuador' AS pais
+  UNION ALL SELECT 'Guano' AS nombre, NULL AS codigo, 'Chimborazo' AS depto, 'Ecuador' AS pais
+  UNION ALL SELECT 'Esmeraldas' AS nombre, NULL AS codigo, 'Esmeraldas' AS depto, 'Ecuador' AS pais
+  UNION ALL SELECT 'Atacames' AS nombre, NULL AS codigo, 'Esmeraldas' AS depto, 'Ecuador' AS pais
 ) x JOIN Pais p ON p.nombrePais = x.pais JOIN Departamento d ON d.nombreDepartamento = x.depto AND d.idPais = p.idPais;
 
 -- ---------------- Sedes, planes y ofertas ----------------

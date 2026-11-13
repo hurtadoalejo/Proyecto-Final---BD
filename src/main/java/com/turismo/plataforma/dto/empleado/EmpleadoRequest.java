@@ -33,26 +33,29 @@ public record EmpleadoRequest(
         @Past(message = "La fecha de nacimiento debe ser una fecha pasada")
         LocalDate fechaNacimiento,
 
-        @NotNull(message = "El país es obligatorio (id de /api/catalogos/paises)")
-        Long pais,
+        @NotBlank(message = "El país es obligatorio")
+        @Size(max = 25, message = "Máximo 25 caracteres")
+        String pais,
 
-        @NotNull(message = "El departamento es obligatorio (id de /api/catalogos/paises/{idPais}/departamentos)")
-        Long departamento,
+        @NotBlank(message = "El departamento es obligatorio")
+        @Size(max = 40, message = "Máximo 40 caracteres")
+        String departamento,
 
-        @NotNull(message = "La ciudad es obligatoria (id de /api/catalogos/departamentos/{idDepartamento}/ciudades)")
-        Long ciudad,
+        @NotBlank(message = "La ciudad es obligatoria")
+        @Size(max = 40, message = "Máximo 40 caracteres")
+        String ciudad,
 
         @NotBlank(message = "La dirección es obligatoria")
         @Size(max = 50, message = "Máximo 50 caracteres")
         String direccion,
 
-        @NotBlank(message = "El indicativo del país es obligatorio")
+        @NotBlank(message = "El indicativo es obligatorio")
         @Pattern(regexp = "^\\+\\d{1,4}$", message = "El indicativo debe tener el formato +57")
-        String indicativoPais,
+        String indicativo,
 
-        @NotBlank(message = "El celular es obligatorio")
-        @Pattern(regexp = "^\\d{7,15}$", message = "El celular debe tener entre 7 y 15 dígitos, sin espacios")
-        String telefonoCelular,
+        @NotBlank(message = "El teléfono es obligatorio")
+        @Pattern(regexp = "^[0-9 -]{7,20}$", message = "El teléfono solo admite números, espacios y guiones")
+        String telefono,
 
         @NotBlank(message = "El correo es obligatorio")
         @Email(message = "El correo no es válido")
@@ -60,8 +63,8 @@ public record EmpleadoRequest(
         String correo,
 
         @NotBlank(message = "La contraseña es obligatoria")
-        @Size(min = 8, max = 72, message = "La contraseña debe tener entre 8 y 72 caracteres")
-        String contrasenia,
+        @Size(min = 8, max = 50, message = "La contraseña debe tener entre 8 y 50 caracteres")
+        String contrasena,
 
         @NotNull(message = "El salario es obligatorio")
         @PositiveOrZero(message = "El salario no puede ser negativo")

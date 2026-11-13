@@ -4,7 +4,7 @@ import java.time.LocalDate;
 
 /**
  * Datos personales que el frontend recolecta en el registro (mismos nombres de campo).
- * pais, departamento y ciudad son ids tomados de /api/catalogos.
+ * pais, departamento y ciudad son NOMBRES (los del formulario de registro del frontend).
  */
 public interface DatosPersonales {
 
@@ -22,17 +22,17 @@ public interface DatosPersonales {
 
     LocalDate fechaNacimiento();
 
-    Long pais();
+    String pais();
 
-    Long departamento();
+    String departamento();
 
-    Long ciudad();
+    String ciudad();
 
     String direccion();
 
-    String indicativoPais();
+    String indicativo();
 
-    String telefonoCelular();
+    String telefono();
 
     String correo();
 }

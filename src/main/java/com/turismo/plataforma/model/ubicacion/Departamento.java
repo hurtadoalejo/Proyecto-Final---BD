@@ -15,7 +15,7 @@ public class Departamento {
     @Column(name = "idDepartamento")
     private Long idDepartamento;
 
-    @Column(name = "nombreDepartamento", nullable = false, length = 25)
+    @Column(name = "nombreDepartamento", nullable = false, length = 40)
     private String nombreDepartamento;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

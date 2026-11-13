@@ -39,7 +39,7 @@ public class AuthService {
 
         Cliente cliente = new Cliente();
         usuarioService.aplicarDatosPersonales(cliente, request);
-        usuarioService.asignarContrasenia(cliente, request.contrasenia());
+        usuarioService.asignarContrasenia(cliente, request.contrasena());
         cliente.setRol(rolCliente);
         return ClienteResponse.from(clienteRepository.save(cliente));
     }
@@ -48,7 +48,7 @@ public class AuthService {
     @Transactional(readOnly = true)
     public LoginResponse login(LoginRequest request) {
         Usuario usuario = usuarioRepository.buscarPorCorreo(UsuarioService.normalizarCorreo(request.correo()))
-                .filter(u -> u.getContrasenia().equals(request.contrasenia()))
+                .filter(u -> u.getContrasenia().equals(request.contrasena()))
                 .orElseThrow(CredencialesInvalidasException::new);
 
         String tipoUsuario = usuario instanceof Empleado ? "EMPLEADO" : "CLIENTE";

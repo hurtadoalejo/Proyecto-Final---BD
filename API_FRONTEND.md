@@ -10,41 +10,36 @@ No hay token: el login valida correo y contraseña y devuelve los datos del usua
 
 ## 1. Registro – `POST /api/auth/registro`
 
-Mismo JSON del formulario, más `fechaNacimiento` (datepicker, formato `"AAAA-MM-DD"`). `segundoNombre` y `segundoApellido` pueden ir en `null`.
-
-Campos que son **select** (el front envía lo que eligió el usuario):
-
-| Campo | Opciones de | Se envía |
-|---|---|---|
-| `tipoIdentificacion` | `GET /api/catalogos/tipos-identificacion` | `nombre` (ej. `"CC"`) |
-| `pais` | `GET /api/catalogos/paises` | `id` |
-| `departamento` | `GET /api/catalogos/paises/{idPais}/departamentos` (se carga al elegir país) | `id` |
-| `ciudad` | `GET /api/catalogos/departamentos/{idDepartamento}/ciudades` (se carga al elegir departamento) | `id` |
-| `indicativoPais` | `GET /api/catalogos/indicativos` → mostrar `"+57 Colombia"` | `indicativo` (ej. `"+57"`) |
+Se envía **el mismo objeto `formData` de `Register.tsx`**, tal cual:
 
 ```json
 {
   "tipoIdentificacion": "CC",
   "numeroIdentificacion": "1094912345",
   "primerNombre": "Juan",
-  "segundoNombre": null,
+  "segundoNombre": "",
   "primerApellido": "Pérez",
-  "segundoApellido": null,
+  "segundoApellido": "",
   "fechaNacimiento": "2000-05-31",
-  "pais": 1,
-  "departamento": 25,
-  "ciudad": 3,
+  "pais": "Colombia",
+  "departamento": "Quindío",
+  "ciudad": "Armenia",
   "direccion": "Calle 15 # 12-34, Barrio Centro",
-  "indicativoPais": "+57",
-  "telefonoCelular": "3001234567",
+  "indicativo": "+57",
+  "telefono": "300 123 4567",
   "correo": "correo@ejemplo.com",
-  "contrasenia": "miPassword123"
+  "contrasena": "miPassword123"
 }
 ```
 
-Validaciones: `tipoIdentificacion` ∈ CC, CE, TI, PA, PEP · nombres máx. 20 · `fechaNacimiento` obligatoria y en el pasado · `indicativoPais` con formato `+57` · `telefonoCelular` de 7 a 15 dígitos sin espacios · `contrasenia` de 8 a 72 caracteres · la ciudad debe pertenecer al departamento y el departamento al país.
+- `pais`, `departamento` y `ciudad` van **por nombre**. La base trae por defecto exactamente los 8 países, 80 departamentos y 160 ciudades de `UBICACIONES` en `Register.tsx`, así que no hace falta pedir listas al backend.
+- `segundoNombre` y `segundoApellido` pueden ir vacíos (`""`) o en `null`.
+- `fechaNacimiento` es el valor del `<input type="date">` (`"AAAA-MM-DD"`).
+- `telefono` acepta espacios y guiones; se guarda junto al indicativo: `"+57 3001234567"`.
 
-**201 Created**
+Validaciones: `tipoIdentificacion` ∈ CC, CE, TI (también PA, PEP) · nombres máx. 20 · `fechaNacimiento` obligatoria y en el pasado · `indicativo` con formato `+57` · `telefono` de 7 a 14 dígitos · `contrasena` de 8 a 50 caracteres · la ciudad debe existir en ese departamento y el departamento en ese país.
+
+**201 Created** – mismos nombres de campo, sin la contraseña:
 
 ```json
 {
@@ -54,23 +49,36 @@ Validaciones: `tipoIdentificacion` ∈ CC, CE, TI, PA, PEP · nombres máx. 20 �
   "primerNombre": "Juan", "segundoNombre": null,
   "primerApellido": "Pérez", "segundoApellido": null,
   "fechaNacimiento": "2000-05-31",
-  "pais": 1, "nombrePais": "Colombia",
-  "departamento": 25, "nombreDepartamento": "Quindío",
-  "ciudad": 3, "nombreCiudad": "Armenia",
+  "pais": "Colombia", "departamento": "Quindío", "ciudad": "Armenia",
   "direccion": "Calle 15 # 12-34, Barrio Centro",
-  "indicativoPais": "+57",
-  "telefonoCelular": "3001234567",
+  "indicativo": "+57", "telefono": "3001234567",
   "correo": "correo@ejemplo.com",
   "rol": "CLIENTE"
 }
 ```
 
-Errores: **400** datos inválidos · **409** correo o identificación ya registrados.
+Errores: **400** datos inválidos (el detalle dice qué campo) · **409** correo o identificación ya registrados.
+
+Ejemplo de llamada desde `handleSubmit`:
+
+```ts
+const res = await fetch('http://localhost:8080/api/auth/registro', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(formData),
+});
+if (!res.ok) {
+  const error = await res.json();
+  throw new Error(error.errores ? Object.values(error.errores).join('\n') : error.detail);
+}
+```
 
 ## 2. Login – `POST /api/auth/login`
 
+Se envía el `formData` de `Login.tsx`:
+
 ```json
-{ "correo": "correo@ejemplo.com", "contrasenia": "miPassword123" }
+{ "correo": "correo@ejemplo.com", "contrasena": "miPassword123" }
 ```
 
 **200 OK**
@@ -96,7 +104,7 @@ Administrador creado al arrancar: `admin@viajacol.com` / `AdminViajaCol2026` (ro
 }
 ```
 
-`tipoTransporte`: AVION, BUS o TREN · `pasajeros`: 1 a 9 · `tramos`: 1 a 6, con fechas en orden y no pasadas · `origen`/`destino`: códigos de 3 letras (ver `/api/catalogos/ciudades-destino`).
+`tipoTransporte`: AVION, BUS o TREN (también en minúscula: `avion`, `tren`, `bus`, como el `TransportMode` del front) · `pasajeros`: 1 a 9 · `tramos`: 1 a 6, con fechas en orden y no pasadas · `origen`/`destino`: códigos de 3 letras (ver `/api/catalogos/ciudades-destino`).
 
 **200 OK** – un bloque por tramo, en el mismo orden. Si un tramo no tiene salidas con cupo ese día, `viajes` viene vacío.
 
@@ -141,7 +149,7 @@ Hay salidas todos los días desde el 13-nov-2026 hasta el 31-ene-2027: avión 06
 | Endpoint | Devuelve |
 |---|---|
 | `/api/catalogos/paises` | `[{ "id": 1, "nombre": "Colombia" }, ...]` |
-| `/api/catalogos/indicativos` | `[{ "idPais": 1, "nombrePais": "Colombia", "indicativo": "+57" }, ...]` |
+| `/api/catalogos/indicativos` | `[{ "idPais": 1, "nombrePais": "Colombia", "indicativo": "+57" }, ...]` (opcional: el front ya los tiene) |
 | `/api/catalogos/paises/{idPais}/departamentos` | `[{ "id": 25, "nombre": "Quindío" }, ...]` |
 | `/api/catalogos/departamentos/{idDepartamento}/ciudades` | `[{ "id": 3, "nombre": "Armenia" }, ...]` |
 | `/api/catalogos/ciudades-destino` | ciudades con código para la búsqueda: `[{ "idCiudad", "nombreCiudad", "codigoCiudad": "MAD", "idDepartamento", "nombreDepartamento", "idPais", "nombrePais" }]` |
@@ -235,8 +243,8 @@ Todos siguen el mismo patrón: `GET /api/x` (lista, con filtro opcional), `GET /
 
 | Recurso | Cuerpo de POST/PUT | Filtro del GET |
 |---|---|---|
-| `/api/clientes` (sin POST: se usa el registro) | igual al registro, sin `contrasenia` | `?q=` identificación o apellido |
-| `/api/empleados` | registro + `salario`, `fechaContratacion` ("2026-01-15"), `idCargo`, `idSede`, `rol` (EMPLEADO o ADMIN). En PUT sin `contrasenia` | `?idSede=` |
+| `/api/clientes` (sin POST: se usa el registro) | igual al registro, sin `contrasena` | `?q=` identificación o apellido |
+| `/api/empleados` | registro + `salario`, `fechaContratacion` ("2026-01-15"), `idCargo`, `idSede`, `rol` (EMPLEADO o ADMIN). En PUT sin `contrasena` | `?idSede=` |
 | `/api/sedes` | `{ nombreSede, direccion, idCiudad }` | `?q=` |
 | `/api/planes` | `{ nombrePlan, descripcionPlan, pesoMaxEquipaje, incluyeCheckIn, precioExtra }` | `?q=` |
 | `/api/ofertas` | `{ titulo, descripcion, porcentajeDescuento, fechaInicio, fechaFin }` | `?vigentes=true` |
@@ -261,7 +269,7 @@ Todos los errores usan el mismo formato (`application/problem+json`):
 ```json
 { "type": "about:blank", "title": "Datos inválidos", "status": 400, "detail": "Revisa los campos marcados.",
   "instance": "/api/auth/registro",
-  "errores": { "correo": "El correo no es válido", "telefonoCelular": "El celular debe tener entre 7 y 15 dígitos, sin espacios" } }
+  "errores": { "correo": "El correo no es válido", "telefono": "El teléfono solo admite números, espacios y guiones" } }
 ```
 
 `errores` (campo → mensaje) solo aparece en errores de validación. Códigos: **400** datos inválidos · **401** login incorrecto · **404** no existe · **409** conflicto (duplicado, sin cupo, registro en uso).

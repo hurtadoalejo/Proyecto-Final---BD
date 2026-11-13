@@ -73,8 +73,7 @@ public class DataInitializer implements ApplicationRunner {
         admin.setTipoIdentificacion(tipo.get());
         admin.setIdentificacion("1020456789");
         admin.setFechaNacimiento(LocalDate.of(1988, 4, 12));
-        admin.setIndicativoPais("+57");
-        admin.setTelefono("3104567890");
+        admin.setTelefono("+57 3104567890");
         admin.setCorreo(CORREO_ADMIN);
         admin.setContrasenia(contraseniaAdmin);
         admin.setDireccion("Calle 26 # 92-32");

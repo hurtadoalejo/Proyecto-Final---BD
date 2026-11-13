@@ -68,10 +68,11 @@ public class CatalogoService {
                 .toList();
     }
 
-    /** Indicativos telefónicos para el select del registro (valor a enviar: indicativo, ej. "+57"). */
+    /** Indicativos telefónicos (valor a enviar: indicativo, ej. "+57"). */
     public List<IndicativoResponse> indicativos() {
         return paisRepository.findAllByOrderByNombrePais().stream()
-                .map(p -> new IndicativoResponse(p.getIdPais(), p.getNombrePais(), p.getIndicativo()))
+                .filter(p -> p.getIndicativo() != null)
+                .map(p -> new IndicativoResponse(p.getIdPais(), p.getNombrePais(), "+" + p.getIndicativo()))
                 .toList();
     }
 
