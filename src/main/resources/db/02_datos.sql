@@ -393,9 +393,12 @@ INSERT INTO Plan (nombrePlan, descripcionPlan, pesoMaxEquipaje, incluyeCheckIn, 
 ('Flexible', 'Maleta de bodega, check-in prioritario y cambios sin costo', 32.00, TRUE, 260000.00),
 ('Premium', 'Dos maletas, sala VIP, check-in prioritario y asiento preferente', 46.00, TRUE, 480000.00);
 INSERT INTO Oferta (titulo, descripcion, porcentajeDescuento, fechaInicio, fechaFin) VALUES
-('Bienvenida', '10% en tu primera reserva', 10.00, '2026-01-01', '2026-12-31'),
-('Navidad en Europa', '15% en viajes por Europa en diciembre', 15.00, '2026-12-01', '2026-12-31'),
-('Semana Santa 2027', '20% en rutas nacionales', 20.00, '2027-03-15', '2027-04-05');
+('Bienvenida', '10% de descuento en tu primera reserva durante 2026', 10.00, '2026-01-01', '2026-12-31'),
+('Mitad de Año', '12% de descuento general en reservas realizadas durante junio', 12.00, '2026-06-01', '2026-06-30'),
+('Semana de Receso', '15% de descuento general en reservas de temporada de octubre', 15.00, '2026-10-01', '2026-10-15'),
+('Black Friday', '25% de descuento en cualquier reserva realizada en noviembre', 25.00, '2026-11-01', '2026-11-30'),
+('Especial Navidad', '15% de descuento general para reservas de fin de año', 15.00, '2026-12-01', '2026-12-31'),
+('Año Nuevo 2027', '20% de descuento general para empezar el año viajando', 20.00, '2027-01-01', '2027-01-31');
 
 -- ---------------- Vehículos ----------------
 INSERT INTO Vehiculo (codigoIdentificacion, idTipoTransporte, capacidad)
