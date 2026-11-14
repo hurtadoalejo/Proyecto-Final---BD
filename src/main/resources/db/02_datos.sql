@@ -8,7 +8,7 @@ USE turismo_db;
 
 -- ---------------- Catálogos ----------------
 INSERT INTO Rol (nombreRol) VALUES ('ADMIN'), ('EMPLEADO'), ('CLIENTE');
-INSERT INTO TipoIdentificacion (nombreIdentificacion) VALUES ('CC'), ('CE'), ('TI'), ('PA'), ('PEP');
+INSERT INTO TipoIdentificacion (nombreIdentificacion) VALUES ('CC'), ('CE'), ('TI'), ('PA'), ('PEP'), ('RC');
 INSERT INTO Cargo (nombreCargo) VALUES ('Administrador del sistema'), ('Asesor de ventas'), ('Agente de servicio al cliente'), ('Coordinador de operaciones');
 INSERT INTO EstadoNotificacion (nombreEstadoNotificacion) VALUES ('PENDIENTE'), ('ENVIADO'), ('FALLIDO');
 INSERT INTO EstadoReserva (nombreEstadoReserva) VALUES ('PENDIENTE'), ('CONFIRMADA'), ('CANCELADA');
