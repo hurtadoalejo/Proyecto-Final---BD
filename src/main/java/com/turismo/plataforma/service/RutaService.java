@@ -19,7 +19,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 
 /** Rutas (origen -> destino con su vehículo) y la búsqueda de viajes del frontend. */
 @Service
@@ -99,9 +98,11 @@ public class RutaService {
     }
 
     private TramoResultado buscarTramo(TramoRequest tramo, String tipoTransporte, int pasajeros) {
-        Ciudad origen = buscarPorCodigo(tramo.origen());
-        Ciudad destino = buscarPorCodigo(tramo.destino());
-        if (origen.getIdCiudad().equals(destino.getIdCiudad())) {
+        List<Ciudad> origenes = buscarPorNombre(tramo.origen());
+        List<Ciudad> destinos = buscarPorNombre(tramo.destino());
+        Ciudad origen = origenes.getFirst();
+        Ciudad destino = destinos.getFirst();
+        if (origen.getNombreCiudad().equalsIgnoreCase(destino.getNombreCiudad())) {
             throw new SolicitudInvalidaException("El origen y el destino de un tramo deben ser diferentes");
         }
 
@@ -113,15 +114,15 @@ public class RutaService {
 
         List<ViajeDisponible> viajes = new ArrayList<>();
         for (ProgramacionViaje salida : programacionViajeRepository.buscarSalidas(
-                origen.getCodigoCiudad(), destino.getCodigoCiudad(), tipoTransporte, desde, hasta)) {
+                ids(origenes), ids(destinos), tipoTransporte, desde, hasta)) {
             long disponibles = salida.getRuta().getVehiculo().getCapacidad()
                     - programacionViajeRepository.contarAsientosOcupados(salida.getIdProgramacionViaje());
             if (disponibles >= pasajeros) {
                 viajes.add(aViajeDisponible(salida, pasajeros, disponibles));
             }
         }
-        return new TramoResultado(origen.getCodigoCiudad(), origen.getNombreCiudad(),
-                destino.getCodigoCiudad(), destino.getNombreCiudad(), tramo.fecha(), viajes);
+        return new TramoResultado(origen.getNombreCiudad(), origen.getDepartamento().getPais().getNombrePais(),
+                destino.getNombreCiudad(), destino.getDepartamento().getPais().getNombrePais(), tramo.fecha(), viajes);
     }
 
     private static ViajeDisponible aViajeDisponible(ProgramacionViaje salida, int pasajeros, long disponibles) {
@@ -143,11 +144,19 @@ public class RutaService {
                 disponibles);
     }
 
-    private Ciudad buscarPorCodigo(String codigo) {
-        String limpio = codigo.trim().toUpperCase(Locale.ROOT);
-        return ciudadRepository.findByCodigoCiudadIgnoreCase(limpio)
-                .orElseThrow(() -> new SolicitudInvalidaException("No existe una ciudad con el código " + limpio
-                        + ". Consulta GET /api/catalogos/ciudades-destino"));
+    /** Ciudades con ese nombre (sin importar mayúsculas ni tildes). Normalmente es una sola. */
+    private List<Ciudad> buscarPorNombre(String nombre) {
+        String limpio = nombre.trim();
+        List<Ciudad> ciudades = ciudadRepository.findByNombreCiudadIgnoreCase(limpio);
+        if (ciudades.isEmpty()) {
+            throw new SolicitudInvalidaException("No existe la ciudad " + limpio
+                    + ". Consulta GET /api/catalogos/ciudades-destino");
+        }
+        return ciudades;
+    }
+
+    private static List<Long> ids(List<Ciudad> ciudades) {
+        return ciudades.stream().map(Ciudad::getIdCiudad).toList();
     }
 
     /** Lo que se consulta antes de modificar la ruta. */

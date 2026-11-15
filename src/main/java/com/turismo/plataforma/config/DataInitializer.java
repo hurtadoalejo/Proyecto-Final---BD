@@ -30,20 +30,17 @@ public class DataInitializer implements ApplicationRunner {
     private final TipoIdentificacionRepository tipoIdentificacionRepository;
     private final CargoRepository cargoRepository;
     private final SedeRepository sedeRepository;
-    private final CiudadRepository ciudadRepository;
     private final String contraseniaAdmin;
 
     public DataInitializer(UsuarioRepository usuarioRepository, RolRepository rolRepository,
                            TipoIdentificacionRepository tipoIdentificacionRepository,
                            CargoRepository cargoRepository, SedeRepository sedeRepository,
-                           CiudadRepository ciudadRepository,
                            @Value("${app.admin.contrasenia}") String contraseniaAdmin) {
         this.usuarioRepository = usuarioRepository;
         this.rolRepository = rolRepository;
         this.tipoIdentificacionRepository = tipoIdentificacionRepository;
         this.cargoRepository = cargoRepository;
         this.sedeRepository = sedeRepository;
-        this.ciudadRepository = ciudadRepository;
         this.contraseniaAdmin = contraseniaAdmin;
     }
 
@@ -56,9 +53,8 @@ public class DataInitializer implements ApplicationRunner {
         var rol = rolRepository.findByNombreRolIgnoreCase(Rol.ADMIN);
         var tipo = tipoIdentificacionRepository.findByNombreIdentificacionIgnoreCase("CC");
         var cargo = cargoRepository.findByNombreCargoIgnoreCase("Administrador del sistema");
-        var sede = sedeRepository.findByNombreSedeIgnoreCase("Sede Principal Bogotá");
-        var ciudad = ciudadRepository.findByCodigoCiudadIgnoreCase("BOG");
-        if (rol.isEmpty() || tipo.isEmpty() || cargo.isEmpty() || sede.isEmpty() || ciudad.isEmpty()) {
+        var sede = sedeRepository.findByNombreSedeIgnoreCase("Sede Principal Medellín");
+        if (rol.isEmpty() || tipo.isEmpty() || cargo.isEmpty() || sede.isEmpty()) {
             log.warn("No se creó el administrador inicial: ejecuta primero db/01_esquema.sql y db/02_datos.sql");
             return;
         }
@@ -76,8 +72,8 @@ public class DataInitializer implements ApplicationRunner {
         admin.setTelefono("+57 3104567890");
         admin.setCorreo(CORREO_ADMIN);
         admin.setContrasenia(contraseniaAdmin);
-        admin.setDireccion("Calle 26 # 92-32");
-        admin.setCiudad(ciudad.get());
+        admin.setDireccion("Carrera 43A # 1-50, El Poblado");
+        admin.setCiudad(sede.get().getCiudad());
         admin.setRol(rol.get());
         admin.setCargo(cargo.get());
         admin.setSede(sede.get());

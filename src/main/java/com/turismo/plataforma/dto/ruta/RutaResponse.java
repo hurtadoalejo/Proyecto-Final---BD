@@ -5,8 +5,8 @@ import com.turismo.plataforma.model.Vehiculo;
 
 import java.math.BigDecimal;
 
-public record RutaResponse(Long idRuta, Long idCiudadOrigen, String ciudadOrigen, String codigoOrigen,
-                           String direccionOrigen, Long idCiudadDestino, String ciudadDestino, String codigoDestino,
+public record RutaResponse(Long idRuta, Long idCiudadOrigen, String ciudadOrigen,
+                           String direccionOrigen, Long idCiudadDestino, String ciudadDestino,
                            String direccionDestino, BigDecimal distancia, Integer duracionEstimada,
                            BigDecimal precioBase, Long idVehiculo, String codigoVehiculo, String tipoTransporte) {
 
@@ -16,11 +16,9 @@ public record RutaResponse(Long idRuta, Long idCiudadOrigen, String ciudadOrigen
                 ruta.getIdRuta(),
                 ruta.getCiudadOrigen().getIdCiudad(),
                 ruta.getCiudadOrigen().getNombreCiudad(),
-                ruta.getCiudadOrigen().getCodigoCiudad(),
                 ruta.getDireccionOrigen(),
                 ruta.getCiudadDestino().getIdCiudad(),
                 ruta.getCiudadDestino().getNombreCiudad(),
-                ruta.getCiudadDestino().getCodigoCiudad(),
                 ruta.getDireccionDestino(),
                 ruta.getDistancia(),
                 ruta.getDuracionEstimada(),

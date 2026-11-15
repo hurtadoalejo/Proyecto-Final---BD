@@ -4,10 +4,8 @@ import com.turismo.plataforma.dto.sede.SedeRequest;
 import com.turismo.plataforma.dto.sede.SedeResponse;
 import com.turismo.plataforma.exception.ConflictoException;
 import com.turismo.plataforma.exception.RecursoNoEncontradoException;
-import com.turismo.plataforma.exception.SolicitudInvalidaException;
 import com.turismo.plataforma.model.Sede;
 import com.turismo.plataforma.model.ubicacion.Ciudad;
-import com.turismo.plataforma.repository.CiudadRepository;
 import com.turismo.plataforma.repository.SedeRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,11 +17,11 @@ import java.util.List;
 public class SedeService {
 
     private final SedeRepository sedeRepository;
-    private final CiudadRepository ciudadRepository;
+    private final CatalogoService catalogoService;
 
-    public SedeService(SedeRepository sedeRepository, CiudadRepository ciudadRepository) {
+    public SedeService(SedeRepository sedeRepository, CatalogoService catalogoService) {
         this.sedeRepository = sedeRepository;
-        this.ciudadRepository = ciudadRepository;
+        this.catalogoService = catalogoService;
     }
 
     public List<SedeResponse> listar(String texto) {
@@ -44,7 +42,7 @@ public class SedeService {
             throw new ConflictoException("Ya existe una sede llamada " + nombre);
         }
         Sede sede = new Sede();
-        aplicar(sede, request, buscarCiudad(request.idCiudad()));
+        aplicar(sede, request, catalogoService.ciudad(request.pais(), request.departamento(), request.ciudad()));
         return SedeResponse.from(sedeRepository.save(sede));
     }
 
@@ -55,7 +53,7 @@ public class SedeService {
         if (sedeRepository.existsByNombreSedeIgnoreCaseAndIdSedeNot(nombre, id)) {
             throw new ConflictoException("Ya existe una sede llamada " + nombre);
         }
-        aplicar(sede, request, buscarCiudad(request.idCiudad()));
+        aplicar(sede, request, catalogoService.ciudad(request.pais(), request.departamento(), request.ciudad()));
         return SedeResponse.from(sede);
     }
 
@@ -70,11 +68,6 @@ public class SedeService {
         sede.setNombreSede(request.nombreSede().trim());
         sede.setDireccion(request.direccion().trim());
         sede.setCiudad(ciudad);
-    }
-
-    private Ciudad buscarCiudad(Long idCiudad) {
-        return ciudadRepository.findById(idCiudad)
-                .orElseThrow(() -> new SolicitudInvalidaException("No existe la ciudad con id " + idCiudad));
     }
 
     private Sede buscarEntidad(Long id) {

@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 
 public interface ProgramacionViajeRepository extends JpaRepository<ProgramacionViaje, Long> {
@@ -27,7 +28,7 @@ public interface ProgramacionViajeRepository extends JpaRepository<ProgramacionV
                                    @Param("desde") LocalDateTime desde,
                                    @Param("hasta") LocalDateTime hasta);
 
-    /** Búsqueda del frontend: salidas de un día entre dos ciudades (por código) en un tipo de transporte. */
+    /** Búsqueda del frontend: salidas de un día entre dos ciudades (por nombre) en un tipo de transporte. */
     @Query("""
            select p from ProgramacionViaje p
              join fetch p.ruta r
@@ -36,14 +37,14 @@ public interface ProgramacionViajeRepository extends JpaRepository<ProgramacionV
              join fetch r.rutaVehiculo rv
              join fetch rv.vehiculo v
              join fetch v.tipoTransporte t
-           where co.codigoCiudad = :origen
-             and cd.codigoCiudad = :destino
+           where co.idCiudad in :origenes
+             and cd.idCiudad in :destinos
              and t.nombreTipoTransporte = :tipoTransporte
              and p.fechaHoraSalida >= :desde and p.fechaHoraSalida < :hasta
            order by p.fechaHoraSalida
            """)
-    List<ProgramacionViaje> buscarSalidas(@Param("origen") String origen,
-                                          @Param("destino") String destino,
+    List<ProgramacionViaje> buscarSalidas(@Param("origenes") Collection<Long> origenes,
+                                          @Param("destinos") Collection<Long> destinos,
                                           @Param("tipoTransporte") String tipoTransporte,
                                           @Param("desde") LocalDateTime desde,
                                           @Param("hasta") LocalDateTime hasta);

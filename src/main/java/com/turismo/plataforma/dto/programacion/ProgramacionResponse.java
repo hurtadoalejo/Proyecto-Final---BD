@@ -6,8 +6,8 @@ import com.turismo.plataforma.model.Vehiculo;
 
 import java.time.LocalDateTime;
 
-public record ProgramacionResponse(Long idProgramacionViaje, Long idRuta, String codigoOrigen, String ciudadOrigen,
-                                   String codigoDestino, String ciudadDestino, LocalDateTime fechaHoraSalida,
+public record ProgramacionResponse(Long idProgramacionViaje, Long idRuta, String ciudadOrigen,
+                                   String ciudadDestino, LocalDateTime fechaHoraSalida,
                                    LocalDateTime fechaHoraLlegada, String tipoTransporte, String codigoVehiculo) {
 
     public static ProgramacionResponse from(ProgramacionViaje programacion) {
@@ -16,9 +16,7 @@ public record ProgramacionResponse(Long idProgramacionViaje, Long idRuta, String
         return new ProgramacionResponse(
                 programacion.getIdProgramacionViaje(),
                 ruta.getIdRuta(),
-                ruta.getCiudadOrigen().getCodigoCiudad(),
                 ruta.getCiudadOrigen().getNombreCiudad(),
-                ruta.getCiudadDestino().getCodigoCiudad(),
                 ruta.getCiudadDestino().getNombreCiudad(),
                 programacion.getFechaHoraSalida(),
                 programacion.calcularLlegada(),

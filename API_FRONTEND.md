@@ -93,20 +93,22 @@ Administrador creado al arrancar: `admin@viajacol.com` / `AdminViajaCol2026` (ro
 
 ## 3. Búsqueda de viajes – `POST /api/rutas/buscar`
 
+`origen` y `destino` van **por nombre de ciudad**, el `name` de `EUROPEAN_CITIES` (el `code` ya no se usa):
+
 ```json
 {
-  "tipoTransporte": "AVION",
+  "tipoTransporte": "avion",
   "pasajeros": 1,
   "tramos": [
-    { "origen": "BOG", "destino": "MDE", "fecha": "2026-11-20" },
-    { "origen": "MDE", "destino": "BOG", "fecha": "2026-11-25" }
+    { "origen": "Madrid", "destino": "París", "fecha": "2026-12-10" },
+    { "origen": "París", "destino": "Madrid", "fecha": "2026-12-15" }
   ]
 }
 ```
 
-`tipoTransporte`: AVION, BUS o TREN (también en minúscula: `avion`, `tren`, `bus`, como el `TransportMode` del front) · `pasajeros`: 1 a 9 · `tramos`: 1 a 6, con fechas en orden y no pasadas · `origen`/`destino`: códigos de 3 letras (ver `/api/catalogos/ciudades-destino`).
+`tipoTransporte`: AVION, BUS o TREN (también en minúscula, como el `TransportMode` del front) · `pasajeros`: 1 a 9 · `tramos`: 1 a 6, con fechas en orden y no pasadas · mayúsculas y tildes no importan (`"paris"` = `"París"`).
 
-**200 OK** – un bloque por tramo, en el mismo orden. Si un tramo no tiene salidas con cupo ese día, `viajes` viene vacío.
+**200 OK** – un bloque por tramo, en el mismo orden. Si un tramo no tiene salidas con cupo ese día (o esas ciudades no tienen ruta en ese transporte), `viajes` viene vacío.
 
 ```json
 {
@@ -114,35 +116,35 @@ Administrador creado al arrancar: `admin@viajacol.com` / `AdminViajaCol2026` (ro
   "pasajeros": 1,
   "tramos": [
     {
-      "origen": "BOG", "ciudadOrigen": "Bogotá",
-      "destino": "MDE", "ciudadDestino": "Medellín",
-      "fecha": "2026-11-20",
+      "origen": "Madrid", "paisOrigen": "España",
+      "destino": "París", "paisDestino": "Francia",
+      "fecha": "2026-12-10",
       "viajes": [
         {
           "idProgramacionViaje": 1234,
           "idRuta": 1,
-          "fechaHoraSalida": "2026-11-20T06:30:00",
-          "fechaHoraLlegada": "2026-11-20T07:25:00",
-          "duracionEstimada": 55,
-          "direccionOrigen": "Aeropuerto El Dorado",
-          "direccionDestino": "Aeropuerto José María Córdova",
+          "fechaHoraSalida": "2026-12-10T06:30:00",
+          "fechaHoraLlegada": "2026-12-10T08:30:00",
+          "duracionEstimada": 120,
+          "direccionOrigen": "Aeropuerto Adolfo Suárez Barajas",
+          "direccionDestino": "Aeropuerto Charles de Gaulle",
           "tipoTransporte": "AVION",
-          "codigoVehiculo": "HK-5120",
-          "distancia": 215.00,
-          "precioBase": 280000.00,
-          "precioTotal": 280000.00,
+          "codigoVehiculo": "EC-MXV",
+          "distancia": 1050.00,
+          "precioBase": 520000.00,
+          "precioTotal": 520000.00,
           "asientosDisponibles": 180
         }
       ]
     },
-    { "origen": "MDE", "ciudadOrigen": "Medellín", "destino": "BOG", "ciudadDestino": "Bogotá", "fecha": "2026-11-25", "viajes": [ ... ] }
+    { "origen": "París", "paisOrigen": "Francia", "destino": "Madrid", "paisDestino": "España", "fecha": "2026-12-15", "viajes": [ ... ] }
   ]
 }
 ```
 
 `duracionEstimada` en minutos · `distancia` en km · `precioTotal` = `precioBase` × pasajeros (sin plan ni oferta). El `idProgramacionViaje` elegido es el que se manda al crear la reserva.
 
-Hay salidas todos los días desde el 13-nov-2026 hasta el 31-ene-2027: avión 06:30 y 18:15, tren 07:00, 13:30 y 19:45, bus 08:00 y 22:30.
+**Rutas:** 798 (ida y vuelta) que conectan ~80 % de los pares entre las 32 ciudades de `EUROPEAN_CITIES`; cada ciudad tiene entre 20 y 28 destinos directos. Hay salidas **todos los días del 01-dic-2026 al 31-ene-2027**: avión ida 06:30 y 15:30 / vuelta 11:00 y 20:00 · tren ida 07:00 y 15:00 / vuelta 11:00 y 19:00 · bus ida 07:00 / vuelta 19:00. Una búsqueda con fecha de noviembre devuelve `viajes` vacío.
 
 ## 4. Catálogos (listas desplegables) – `GET`
 
@@ -152,7 +154,8 @@ Hay salidas todos los días desde el 13-nov-2026 hasta el 31-ene-2027: avión 06
 | `/api/catalogos/indicativos` | `[{ "idPais": 1, "nombrePais": "Colombia", "indicativo": "+57" }, ...]` (opcional: el front ya los tiene) |
 | `/api/catalogos/paises/{idPais}/departamentos` | `[{ "id": 25, "nombre": "Quindío" }, ...]` |
 | `/api/catalogos/departamentos/{idDepartamento}/ciudades` | `[{ "id": 3, "nombre": "Armenia" }, ...]` |
-| `/api/catalogos/ciudades-destino` | ciudades con código para la búsqueda: `[{ "idCiudad", "nombreCiudad", "codigoCiudad": "MAD", "idDepartamento", "nombreDepartamento", "idPais", "nombrePais" }]` |
+| `/api/catalogos/ubicaciones` | **misma forma que `UBICACIONES` de `Register.tsx`**: `{ "Colombia": { "Antioquia": ["Medellín", "Envigado"], ... }, ... }`. Sirve para los selects de registro, sedes y empleados (solo países de clientes y sedes, no los de rutas) |
+| `/api/catalogos/ciudades-destino` | ciudades con rutas (las 32 de `EUROPEAN_CITIES`): `[{ "idCiudad", "nombreCiudad", "idDepartamento", "nombreDepartamento", "idPais", "nombrePais" }]` |
 | `/api/catalogos/tipos-identificacion` | CC, CE, TI, PA, PEP |
 | `/api/catalogos/tipos-transporte` | AVION, BUS, TREN |
 | `/api/catalogos/tipos-trayecto` | IDA, VUELTA |
@@ -196,9 +199,9 @@ Cada pasajero viaja en todos los viajes de la reserva con el mismo asiento y pla
   "idCliente": 2, "nombreCliente": "Juan Pérez", "idEmpleado": null, "nombreEmpleado": null,
   "idOferta": 1, "tituloOferta": "Bienvenida",
   "viajes": [
-    { "idProgramacionViaje": 1234, "tipoTrayecto": "IDA", "codigoOrigen": "BOG", "ciudadOrigen": "Bogotá",
-      "codigoDestino": "MDE", "ciudadDestino": "Medellín", "fechaHoraSalida": "2026-11-20T06:30:00",
-      "fechaHoraLlegada": "2026-11-20T07:25:00", "precioBase": 280000.00 }
+    { "idProgramacionViaje": 1234, "tipoTrayecto": "IDA", "ciudadOrigen": "Madrid",
+      "ciudadDestino": "París", "fechaHoraSalida": "2026-12-10T06:30:00",
+      "fechaHoraLlegada": "2026-12-10T08:30:00", "precioBase": 520000.00 }
   ],
   "pasajeros": [
     { "idDetalle": 1, "tipoIdentificacion": "CC", "numeroIdentificacion": "1094912345", "nombreCompleto": "Juan Pérez",
@@ -245,11 +248,11 @@ Todos siguen el mismo patrón: `GET /api/x` (lista, con filtro opcional), `GET /
 |---|---|---|
 | `/api/clientes` (sin POST: se usa el registro) | igual al registro, sin `contrasena` | `?q=` identificación o apellido |
 | `/api/empleados` | registro + `salario`, `fechaContratacion` ("2026-01-15"), `idCargo`, `idSede`, `rol` (EMPLEADO o ADMIN). En PUT sin `contrasena` | `?idSede=` |
-| `/api/sedes` | `{ nombreSede, direccion, idCiudad }` | `?q=` |
+| `/api/sedes` | `{ nombreSede, direccion, pais, departamento, ciudad }` (por nombre, como en `/api/catalogos/ubicaciones`) | `?q=` |
 | `/api/planes` | `{ nombrePlan, descripcionPlan, pesoMaxEquipaje, incluyeCheckIn, precioExtra }` | `?q=` |
 | `/api/ofertas` | `{ titulo, descripcion, porcentajeDescuento, fechaInicio, fechaFin }` | `?vigentes=true` |
 | `/api/vehiculos` | `{ codigoIdentificacion, tipoTransporte, capacidad }` | `?q=` |
-| `/api/rutas` | `{ idCiudadOrigen, direccionOrigen, idCiudadDestino, direccionDestino, distancia, duracionEstimada, precioBase, idVehiculo }` | `?q=` ciudad o código |
+| `/api/rutas` | `{ idCiudadOrigen, direccionOrigen, idCiudadDestino, direccionDestino, distancia, duracionEstimada, precioBase, idVehiculo }` | `?q=` nombre de ciudad |
 | `/api/programaciones` | `{ idRuta, fechaHoraSalida: "2026-12-20T08:30:00" }` | `?idRuta=&desde=2026-12-01&hasta=2026-12-07` (máx. 31 días; por defecto los próximos 7) |
 | `/api/notificaciones` | `{ mensaje, estadoNotificacion, idOferta, idsClientes: [2, 5] }` | `?idCliente=` |
 

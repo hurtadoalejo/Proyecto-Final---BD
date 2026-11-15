@@ -5,12 +5,15 @@ import com.turismo.plataforma.dto.catalogo.CiudadResponse;
 import com.turismo.plataforma.dto.catalogo.IndicativoResponse;
 import com.turismo.plataforma.exception.SolicitudInvalidaException;
 import com.turismo.plataforma.model.catalogo.*;
+import com.turismo.plataforma.model.ubicacion.Ciudad;
+import com.turismo.plataforma.model.ubicacion.Departamento;
+import com.turismo.plataforma.model.ubicacion.Pais;
 import com.turismo.plataforma.repository.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Tablas catálogo (Rol, TipoIdentificacion, Cargo, estados...) y ubicación (País, Departamento, Ciudad).
@@ -88,9 +91,37 @@ public class CatalogoService {
                 .toList();
     }
 
-    /** Ciudades con código (BOG, MAD...): las que se usan en la búsqueda de viajes. */
+    /**
+     * Países, departamentos y ciudades para registro, sedes y empleados, con la misma forma que
+     * UBICACIONES del frontend: { "Colombia": { "Antioquia": ["Medellín", "Envigado"], ... }, ... }.
+     * No incluye los países que solo tienen ciudades de rutas (Francia, Italia...).
+     */
+    public Map<String, Map<String, List<String>>> ubicaciones() {
+        Set<Long> ciudadesConRutas = ciudadRepository.listarConRutas().stream()
+                .map(Ciudad::getIdCiudad)
+                .collect(Collectors.toSet());
+        List<Ciudad> ciudades = ciudadRepository.listarConUbicacion();
+        Set<String> paisesConUbicaciones = ciudades.stream()
+                .filter(c -> !ciudadesConRutas.contains(c.getIdCiudad()))
+                .map(c -> c.getDepartamento().getPais().getNombrePais())
+                .collect(Collectors.toSet());
+
+        Map<String, Map<String, List<String>>> ubicaciones = new LinkedHashMap<>();
+        for (Ciudad ciudad : ciudades) {
+            Departamento departamento = ciudad.getDepartamento();
+            String pais = departamento.getPais().getNombrePais();
+            if (paisesConUbicaciones.contains(pais)) {
+                ubicaciones.computeIfAbsent(pais, p -> new LinkedHashMap<>())
+                        .computeIfAbsent(departamento.getNombreDepartamento(), d -> new ArrayList<>())
+                        .add(ciudad.getNombreCiudad());
+            }
+        }
+        return ubicaciones;
+    }
+
+    /** Ciudades que tienen rutas: las que se usan en la búsqueda de viajes. */
     public List<CiudadResponse> ciudadesDestino() {
-        return ciudadRepository.listarConCodigo().stream()
+        return ciudadRepository.listarConRutas().stream()
                 .map(CiudadResponse::from)
                 .toList();
     }
@@ -188,6 +219,21 @@ public class CatalogoService {
     public TipoTrayecto tipoTrayecto(String nombre) {
         return encontrar(tipoTrayectoRepository.findByNombreTipoTrayectoIgnoreCase(limpiar(nombre)),
                 "tipo de trayecto", nombre);
+    }
+
+    /** Ciudad por nombres (como en el formulario): debe existir en ese departamento y país. */
+    public Ciudad ciudad(String nombrePais, String nombreDepartamento, String nombreCiudad) {
+        Pais pais = paisRepository.findByNombrePaisIgnoreCase(nombrePais.trim())
+                .orElseThrow(() -> new SolicitudInvalidaException("No existe el país " + nombrePais));
+        Departamento departamento = departamentoRepository
+                .findByNombreDepartamentoIgnoreCaseAndPaisIdPais(nombreDepartamento.trim(), pais.getIdPais())
+                .orElseThrow(() -> new SolicitudInvalidaException("El departamento " + nombreDepartamento
+                        + " no existe en " + pais.getNombrePais()));
+        return ciudadRepository
+                .findByNombreCiudadIgnoreCaseAndDepartamentoIdDepartamento(nombreCiudad.trim(),
+                        departamento.getIdDepartamento())
+                .orElseThrow(() -> new SolicitudInvalidaException("La ciudad " + nombreCiudad
+                        + " no existe en " + departamento.getNombreDepartamento()));
     }
 
     public Cargo cargo(Long idCargo) {

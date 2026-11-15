@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Map;
 
 /** Listas para los desplegables del frontend (solo lectura). */
 @RestController
@@ -20,6 +21,12 @@ public class CatalogoController {
 
     public CatalogoController(CatalogoService catalogoService) {
         this.catalogoService = catalogoService;
+    }
+
+    /** Misma forma que UBICACIONES del frontend: { país: { departamento: [ciudades] } }. */
+    @GetMapping("/ubicaciones")
+    public Map<String, Map<String, List<String>>> ubicaciones() {
+        return catalogoService.ubicaciones();
     }
 
     @GetMapping("/paises")
@@ -43,7 +50,7 @@ public class CatalogoController {
         return catalogoService.ciudades(idDepartamento);
     }
 
-    /** Ciudades con código de 3 letras: origen y destino de la búsqueda de viajes. */
+    /** Ciudades que tienen rutas: origen y destino de la búsqueda de viajes. */
     @GetMapping("/ciudades-destino")
     public List<CiudadResponse> ciudadesDestino() {
         return catalogoService.ciudadesDestino();

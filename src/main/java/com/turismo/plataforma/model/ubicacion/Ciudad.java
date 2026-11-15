@@ -18,10 +18,6 @@ public class Ciudad {
     @Column(name = "nombreCiudad", nullable = false, length = 40)
     private String nombreCiudad;
 
-    /** Código de 3 letras que usa el frontend (BOG, MAD...). Solo lo tienen las ciudades con rutas. */
-    @Column(name = "codigoCiudad", unique = true, length = 3)
-    private String codigoCiudad;
-
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "idDepartamento", nullable = false)
     private Departamento departamento;

@@ -7,14 +7,14 @@ import jakarta.validation.constraints.Size;
 
 import java.time.LocalDate;
 
-/** Un tramo de la búsqueda: códigos de ciudad (BOG, MAD...) y fecha de salida. */
+/** Un tramo de la búsqueda: nombres de ciudad (Madrid, París...) y fecha de salida. */
 public record TramoRequest(
         @NotBlank(message = "El origen es obligatorio")
-        @Size(min = 3, max = 3, message = "El origen es un código de 3 letras")
+        @Size(max = 40, message = "Máximo 40 caracteres")
         String origen,
 
         @NotBlank(message = "El destino es obligatorio")
-        @Size(min = 3, max = 3, message = "El destino es un código de 3 letras")
+        @Size(max = 40, message = "Máximo 40 caracteres")
         String destino,
 
         @NotNull(message = "La fecha es obligatoria")

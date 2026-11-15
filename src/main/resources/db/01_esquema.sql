@@ -4,7 +4,7 @@
 --  (Oracle SQL Developer Data Modeler, ProyectoFinal.dmd, versión del 13-nov-2026).
 --
 --  Nombres de tablas y columnas: EXACTOS a los del modelo.
---  Ajustes sobre el modelo (marcados con [C1]..[C6]):
+--  Ajustes sobre el modelo (marcados con [C1], [C2], [C4], [C5] y [C6]):
 --   [C1] Fechas con hora (salida, reserva, pago, envío, emisión): DATE -> DATETIME.
 --   [C2] Dinero y medidas: NUMERIC sin escala -> DECIMAL con decimales.
 --   [C4] UNIQUE en Usuario.correo y Usuario.identificacion.

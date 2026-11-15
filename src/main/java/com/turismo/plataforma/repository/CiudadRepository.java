@@ -11,17 +11,26 @@ public interface CiudadRepository extends JpaRepository<Ciudad, Long> {
 
     List<Ciudad> findByDepartamentoIdDepartamentoOrderByNombreCiudad(Long idDepartamento);
 
-    Optional<Ciudad> findByCodigoCiudadIgnoreCase(String codigoCiudad);
+    List<Ciudad> findByNombreCiudadIgnoreCase(String nombreCiudad);
 
     Optional<Ciudad> findByNombreCiudadIgnoreCaseAndDepartamentoIdDepartamento(String nombreCiudad, Long idDepartamento);
 
-    /** Ciudades con código (las que tienen rutas), con su país. */
+    /** Ciudades que son origen o destino de alguna ruta, con su departamento y país. */
     @Query("""
            select c from Ciudad c
              join fetch c.departamento d
              join fetch d.pais p
-           where c.codigoCiudad is not null
+           where exists (select 1 from Ruta r where r.ciudadOrigen = c or r.ciudadDestino = c)
            order by p.nombrePais, c.nombreCiudad
            """)
-    List<Ciudad> listarConCodigo();
+    List<Ciudad> listarConRutas();
+
+    /** Todas las ciudades con su departamento y país (para armar el catálogo de ubicaciones). */
+    @Query("""
+           select c from Ciudad c
+             join fetch c.departamento d
+             join fetch d.pais p
+           order by p.idPais, d.idDepartamento, c.idCiudad
+           """)
+    List<Ciudad> listarConUbicacion();
 }
