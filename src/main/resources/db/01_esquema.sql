@@ -7,7 +7,6 @@
 --  Ajustes sobre el modelo (marcados con [C1]..[C6]):
 --   [C1] Fechas con hora (salida, reserva, pago, envío, emisión): DATE -> DATETIME.
 --   [C2] Dinero y medidas: NUMERIC sin escala -> DECIMAL con decimales.
---   [C3] Ciudad.codigoCiudad (nuevo): código de 3 letras que usa el frontend (BOG, MAD...).
 --   [C4] UNIQUE en Usuario.correo y Usuario.identificacion.
 --   [C5] Notificacion.idOferta pasa a ser opcional (recordatorios sin oferta).
 --   [C6] nombreDepartamento y nombreCiudad: VARCHAR(25) -> VARCHAR(40), porque el registro
@@ -107,11 +106,9 @@ CREATE TABLE Departamento (
 CREATE TABLE Ciudad (
     idCiudad        BIGINT       NOT NULL AUTO_INCREMENT,
     nombreCiudad    VARCHAR(40)  NOT NULL,       -- [C6]
-    codigoCiudad    VARCHAR(3),                                   -- [C3]
     idDepartamento  BIGINT       NOT NULL,
     CONSTRAINT Ciudad_PK PRIMARY KEY (idCiudad),
     CONSTRAINT Ciudad_Departamento_FK FOREIGN KEY (idDepartamento) REFERENCES Departamento (idDepartamento),
-    CONSTRAINT Ciudad_codigo_UK UNIQUE (codigoCiudad),
     CONSTRAINT Ciudad_nombre_UK UNIQUE (nombreCiudad, idDepartamento)
 );
 
