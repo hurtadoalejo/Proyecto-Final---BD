@@ -23,10 +23,36 @@ public class CatalogoController {
         this.catalogoService = catalogoService;
     }
 
-    /** Misma forma que UBICACIONES del frontend: { país: { departamento: [ciudades] } }. */
+    // ---- Ubicaciones completas: { país: { departamento: [ciudades] } } ----
+
+    /** Todos los países. */
     @GetMapping("/ubicaciones")
     public Map<String, Map<String, List<String>>> ubicaciones() {
         return catalogoService.ubicaciones();
+    }
+
+    /** Solo países de Europa (ciudades de las rutas y España). */
+    @GetMapping("/ubicaciones/europa")
+    public Map<String, Map<String, List<String>>> ubicacionesEuropa() {
+        return catalogoService.ubicacionesEuropa();
+    }
+
+    /** Países que no son de Europa (clientes y sedes). */
+    @GetMapping("/ubicaciones/no-europa")
+    public Map<String, Map<String, List<String>>> ubicacionesFueraDeEuropa() {
+        return catalogoService.ubicacionesFueraDeEuropa();
+    }
+
+    // ---- Consultas individuales ----
+
+    @GetMapping("/continentes")
+    public List<CatalogoItem> continentes() {
+        return catalogoService.continentes();
+    }
+
+    @GetMapping("/continentes/{idContinente}/paises")
+    public List<CatalogoItem> paisesPorContinente(@PathVariable("idContinente") Long idContinente) {
+        return catalogoService.paisesPorContinente(idContinente);
     }
 
     @GetMapping("/paises")
@@ -38,6 +64,12 @@ public class CatalogoController {
     @GetMapping("/indicativos")
     public List<IndicativoResponse> indicativos() {
         return catalogoService.indicativos();
+    }
+
+    /** Nombre e indicativo de los países que no son de Europa: [{ idPais, nombrePais, indicativo: "+57" }]. */
+    @GetMapping("/indicativos/no-europa")
+    public List<IndicativoResponse> indicativosFueraDeEuropa() {
+        return catalogoService.indicativosFueraDeEuropa();
     }
 
     @GetMapping("/paises/{idPais}/departamentos")

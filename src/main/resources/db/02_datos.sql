@@ -4,7 +4,8 @@
 --  10 sedes en Colombia (central en Medellín, idSede = 1), 10 asesores de
 --  ventas (uno por sede), 4 clientes de prueba, vehículos, 798 rutas europeas
 --  (~80 % de los pares entre las 32 ciudades de EUROPEAN_CITIES, ida y vuelta)
---  y su programación del 01-dic-2026 al 31-ene-2027.
+--  y su programación del 01-dic-2026 al 31-ene-2027, más 40 reservas de ejemplo
+--  con pagos y facturas (para los reportes) y las notificaciones de las ofertas.
 --  La administradora (admin@viajacol.com) la crea la aplicación al arrancar.
 -- =====================================================================
 USE turismo_db;
@@ -21,14 +22,44 @@ INSERT INTO TipoTransporte (nombreTipoTransporte) VALUES ('AVION'), ('BUS'), ('T
 INSERT INTO TipoTrayecto (nombreTipoTrayecto) VALUES ('IDA'), ('VUELTA');
 
 -- ---------------- Ubicación ----------------
--- 28 países con su indicativo telefónico.
-INSERT INTO Pais (nombrePais, indicativo) VALUES
-('Colombia', 57), ('Estados Unidos', 1), ('España', 34), ('México', 52), ('Argentina', 54),
-('Chile', 56), ('Perú', 51), ('Ecuador', 593), ('Francia', 33), ('Reino Unido', 44),
-('Italia', 39), ('Países Bajos', 31), ('Alemania', 49), ('Portugal', 351), ('Bélgica', 32),
-('Austria', 43), ('Suiza', 41), ('Grecia', 30), ('Irlanda', 353), ('República Checa', 420),
-('Hungría', 36), ('Polonia', 48), ('Dinamarca', 45), ('Suecia', 46), ('Noruega', 47),
-('Finlandia', 358), ('Turquía', 90), ('Islandia', 354);
+-- Continentes. América: países de clientes y sedes; Europa: España y los países de las rutas.
+INSERT INTO Continente (nombreContinente) VALUES ('América'), ('Europa'), ('Asia'), ('África'), ('Oceanía');
+
+-- 28 países con su indicativo telefónico y su continente.
+INSERT INTO Pais (nombrePais, indicativoPais, Continente_idContinente)
+SELECT x.pais, x.indicativo, c.idContinente
+FROM (
+    SELECT 'Colombia' AS pais, 57 AS indicativo, 'América' AS continente
+    UNION ALL SELECT 'Estados Unidos', 1, 'América'
+    UNION ALL SELECT 'España', 34, 'Europa'
+    UNION ALL SELECT 'México', 52, 'América'
+    UNION ALL SELECT 'Argentina', 54, 'América'
+    UNION ALL SELECT 'Chile', 56, 'América'
+    UNION ALL SELECT 'Perú', 51, 'América'
+    UNION ALL SELECT 'Ecuador', 593, 'América'
+    UNION ALL SELECT 'Francia', 33, 'Europa'
+    UNION ALL SELECT 'Reino Unido', 44, 'Europa'
+    UNION ALL SELECT 'Italia', 39, 'Europa'
+    UNION ALL SELECT 'Países Bajos', 31, 'Europa'
+    UNION ALL SELECT 'Alemania', 49, 'Europa'
+    UNION ALL SELECT 'Portugal', 351, 'Europa'
+    UNION ALL SELECT 'Bélgica', 32, 'Europa'
+    UNION ALL SELECT 'Austria', 43, 'Europa'
+    UNION ALL SELECT 'Suiza', 41, 'Europa'
+    UNION ALL SELECT 'Grecia', 30, 'Europa'
+    UNION ALL SELECT 'Irlanda', 353, 'Europa'
+    UNION ALL SELECT 'República Checa', 420, 'Europa'
+    UNION ALL SELECT 'Hungría', 36, 'Europa'
+    UNION ALL SELECT 'Polonia', 48, 'Europa'
+    UNION ALL SELECT 'Dinamarca', 45, 'Europa'
+    UNION ALL SELECT 'Suecia', 46, 'Europa'
+    UNION ALL SELECT 'Noruega', 47, 'Europa'
+    UNION ALL SELECT 'Finlandia', 358, 'Europa'
+    UNION ALL SELECT 'Turquía', 90, 'Europa'
+    UNION ALL SELECT 'Islandia', 354, 'Europa'
+    ) x
+JOIN Continente c ON c.nombreContinente = x.continente
+ORDER BY FIELD(x.pais, 'Colombia', 'Estados Unidos', 'España', 'México', 'Argentina', 'Chile', 'Perú', 'Ecuador', 'Francia', 'Reino Unido', 'Italia', 'Países Bajos', 'Alemania', 'Portugal', 'Bélgica', 'Austria', 'Suiza', 'Grecia', 'Irlanda', 'República Checa', 'Hungría', 'Polonia', 'Dinamarca', 'Suecia', 'Noruega', 'Finlandia', 'Turquía', 'Islandia');
 
 -- Tabla temporal (país, departamento, ciudad): de ella salen Departamento y Ciudad.
 CREATE TEMPORARY TABLE tmp_ubic (pais VARCHAR(25), depto VARCHAR(40), ciudad VARCHAR(40));
@@ -1558,6 +1589,277 @@ ORDER BY 1, 2;
 
 DROP TEMPORARY TABLE tmp_ruta;
 
+-- ---------------- Reservas de ejemplo (para los reportes) ----------------
+-- 40 reservas hechas entre junio y noviembre de 2026 para viajes de dic-2026 / ene-2027:
+-- 35 CONFIRMADAS (con transacción APROBADA y factura), 2 PENDIENTES (sin pago) y 3 CANCELADAS.
+-- El monto pagado sigue la regla de la aplicación: por pasajero (tarifas de los viajes + plan),
+-- menos el % de la oferta. Las generó tools/gen_reservas.py.
+CREATE TEMPORARY TABLE tmp_reserva (
+    idReserva BIGINT, cliente VARCHAR(100), empleado VARCHAR(100), oferta VARCHAR(30),
+    estado VARCHAR(20), fechaReserva DATETIME, metodoPago VARCHAR(30), monto DECIMAL(12,2), fechaPago DATETIME
+);
+INSERT INTO tmp_reserva VALUES
+(1, 'diego.cano@correo.com', 'asesor.bogota@viajacol.com', 'Mitad de Año', 'CONFIRMADA', '2026-06-16 15:12:00', 'TARJETA_CREDITO', 258720.00, '2026-06-17 00:28:00'),
+(2, 'diego.cano@correo.com', 'asesor.armenia@viajacol.com', 'Bienvenida', 'CONFIRMADA', '2026-07-01 09:04:00', 'TARJETA_CREDITO', 864000.00, '2026-07-01 09:47:00'),
+(3, 'pedro.martinez@correo.com', 'asesor.barranquilla@viajacol.com', 'Bienvenida', 'CONFIRMADA', '2026-07-05 17:32:00', 'TARJETA_CREDITO', 1854000.00, '2026-07-06 03:12:00'),
+(4, 'lucia.fernandez@correo.com', 'asesor.cali@viajacol.com', NULL, 'CONFIRMADA', '2026-07-06 13:21:00', 'TARJETA_CREDITO', 240000.00, '2026-07-06 16:22:00'),
+(5, 'pedro.martinez@correo.com', 'asesor.cali@viajacol.com', 'Bienvenida', 'CONFIRMADA', '2026-07-08 08:18:00', 'TARJETA_DEBITO', 352800.00, '2026-07-08 14:33:00'),
+(6, 'lucia.fernandez@correo.com', 'asesor.manizales@viajacol.com', 'Bienvenida', 'CONFIRMADA', '2026-07-15 11:05:00', 'TARJETA_CREDITO', 990000.00, '2026-07-15 19:50:00'),
+(7, 'ana.gutierrez@correo.com', 'asesor.medellin@viajacol.com', NULL, 'CONFIRMADA', '2026-07-25 08:20:00', 'TARJETA_CREDITO', 990000.00, '2026-07-25 13:03:00'),
+(8, 'pedro.martinez@correo.com', 'asesor.medellin@viajacol.com', 'Bienvenida', 'CONFIRMADA', '2026-07-29 09:22:00', 'PSE', 1512000.00, '2026-07-29 15:39:00'),
+(9, 'ana.gutierrez@correo.com', 'asesor.medellin@viajacol.com', 'Bienvenida', 'CONFIRMADA', '2026-07-30 12:58:00', 'TARJETA_CREDITO', 864000.00, '2026-07-30 19:07:00'),
+(10, 'lucia.fernandez@correo.com', 'asesor.medellin@viajacol.com', 'Bienvenida', 'CONFIRMADA', '2026-08-05 13:58:00', 'PSE', 230400.00, '2026-08-05 15:55:00'),
+(11, 'diego.cano@correo.com', NULL, 'Bienvenida', 'CONFIRMADA', '2026-08-06 11:51:00', 'TARJETA_DEBITO', 792000.00, '2026-08-06 12:33:00'),
+(12, 'diego.cano@correo.com', NULL, 'Bienvenida', 'CANCELADA', '2026-08-08 10:27:00', NULL, 230400.00, NULL),
+(13, 'pedro.martinez@correo.com', 'asesor.cali@viajacol.com', 'Bienvenida', 'CONFIRMADA', '2026-08-13 13:03:00', 'TARJETA_CREDITO', 612900.00, '2026-08-13 21:28:00'),
+(14, 'pedro.martinez@correo.com', 'asesor.barranquilla@viajacol.com', 'Bienvenida', 'CONFIRMADA', '2026-08-15 12:14:00', 'TARJETA_CREDITO', 1512000.00, '2026-08-15 19:51:00'),
+(15, 'ana.gutierrez@correo.com', NULL, 'Bienvenida', 'CONFIRMADA', '2026-08-15 12:31:00', 'TARJETA_CREDITO', 367200.00, '2026-08-15 13:41:00'),
+(16, 'lucia.fernandez@correo.com', NULL, 'Bienvenida', 'CONFIRMADA', '2026-08-16 10:59:00', 'PSE', 349200.00, '2026-08-16 15:22:00'),
+(17, 'ana.gutierrez@correo.com', 'asesor.tunja@viajacol.com', NULL, 'CONFIRMADA', '2026-08-16 10:27:00', 'TARJETA_CREDITO', 2828000.00, '2026-08-16 13:57:00'),
+(18, 'ana.gutierrez@correo.com', 'asesor.pereira@viajacol.com', 'Bienvenida', 'CONFIRMADA', '2026-08-21 17:41:00', 'PSE', 1825200.00, '2026-08-22 00:34:00'),
+(19, 'pedro.martinez@correo.com', 'asesor.cali@viajacol.com', NULL, 'CONFIRMADA', '2026-08-25 10:20:00', 'TARJETA_CREDITO', 240000.00, '2026-08-25 18:55:00'),
+(20, 'ana.gutierrez@correo.com', 'asesor.pereira@viajacol.com', 'Bienvenida', 'CONFIRMADA', '2026-09-03 12:53:00', 'PSE', 459000.00, '2026-09-03 14:48:00'),
+(21, 'pedro.martinez@correo.com', NULL, 'Bienvenida', 'CONFIRMADA', '2026-09-05 11:07:00', 'PSE', 1497600.00, '2026-09-05 13:30:00'),
+(22, 'lucia.fernandez@correo.com', NULL, 'Bienvenida', 'CONFIRMADA', '2026-09-05 11:38:00', 'TARJETA_CREDITO', 540000.00, '2026-09-05 15:44:00'),
+(23, 'lucia.fernandez@correo.com', 'asesor.bogota@viajacol.com', NULL, 'CONFIRMADA', '2026-09-07 19:22:00', 'PSE', 288000.00, '2026-09-07 19:45:00'),
+(24, 'lucia.fernandez@correo.com', NULL, 'Bienvenida', 'CONFIRMADA', '2026-09-08 13:44:00', 'TARJETA_CREDITO', 259200.00, '2026-09-08 20:25:00'),
+(25, 'ana.gutierrez@correo.com', 'asesor.bogota@viajacol.com', NULL, 'CONFIRMADA', '2026-09-11 15:08:00', 'TARJETA_CREDITO', 720000.00, '2026-09-11 16:26:00'),
+(26, 'diego.cano@correo.com', 'asesor.medellin@viajacol.com', 'Bienvenida', 'CONFIRMADA', '2026-09-14 10:37:00', 'TARJETA_CREDITO', 108000.00, '2026-09-14 15:04:00'),
+(27, 'ana.gutierrez@correo.com', 'asesor.tunja@viajacol.com', NULL, 'CONFIRMADA', '2026-09-19 17:11:00', 'PSE', 1320000.00, '2026-09-19 17:47:00'),
+(28, 'ana.gutierrez@correo.com', 'asesor.bogota@viajacol.com', 'Bienvenida', 'CONFIRMADA', '2026-09-26 16:48:00', 'TARJETA_CREDITO', 3223800.00, '2026-09-26 17:11:00'),
+(29, 'ana.gutierrez@correo.com', 'asesor.cali@viajacol.com', 'Semana de Receso', 'CONFIRMADA', '2026-10-09 12:23:00', 'TARJETA_CREDITO', 1159400.00, '2026-10-09 18:16:00'),
+(30, 'pedro.martinez@correo.com', NULL, 'Semana de Receso', 'CONFIRMADA', '2026-10-12 08:07:00', 'PSE', 680850.00, '2026-10-12 11:40:00'),
+(31, 'lucia.fernandez@correo.com', 'asesor.cali@viajacol.com', 'Semana de Receso', 'CONFIRMADA', '2026-10-14 09:49:00', 'PSE', 360400.00, '2026-10-14 18:47:00'),
+(32, 'lucia.fernandez@correo.com', 'asesor.pereira@viajacol.com', 'Bienvenida', 'CONFIRMADA', '2026-10-25 11:20:00', 'PSE', 410400.00, '2026-10-25 20:01:00'),
+(33, 'diego.cano@correo.com', 'asesor.barranquilla@viajacol.com', 'Bienvenida', 'CONFIRMADA', '2026-10-26 11:17:00', 'TARJETA_CREDITO', 349200.00, '2026-10-26 17:56:00'),
+(34, 'lucia.fernandez@correo.com', 'asesor.tunja@viajacol.com', NULL, 'CONFIRMADA', '2026-10-29 18:29:00', 'TARJETA_CREDITO', 1160000.00, '2026-10-30 03:02:00'),
+(35, 'ana.gutierrez@correo.com', NULL, 'Bienvenida', 'CONFIRMADA', '2026-10-30 16:20:00', 'TARJETA_DEBITO', 1728000.00, '2026-10-30 23:09:00'),
+(36, 'pedro.martinez@correo.com', NULL, 'Black Friday', 'CONFIRMADA', '2026-11-05 08:25:00', 'TARJETA_CREDITO', 630000.00, '2026-11-05 11:11:00'),
+(37, 'pedro.martinez@correo.com', 'asesor.cali@viajacol.com', 'Black Friday', 'PENDIENTE', '2026-11-06 08:49:00', NULL, 585000.00, NULL),
+(38, 'lucia.fernandez@correo.com', 'asesor.bogota@viajacol.com', NULL, 'PENDIENTE', '2026-11-13 16:31:00', NULL, 2360000.00, NULL),
+(39, 'pedro.martinez@correo.com', 'asesor.cali@viajacol.com', 'Black Friday', 'CANCELADA', '2026-11-13 17:02:00', NULL, 975000.00, NULL),
+(40, 'pedro.martinez@correo.com', 'asesor.bogota@viajacol.com', 'Black Friday', 'CANCELADA', '2026-11-13 18:59:00', NULL, 807000.00, NULL);
+
+CREATE TEMPORARY TABLE tmp_viaje (idReserva BIGINT, origen VARCHAR(40), destino VARCHAR(40),
+                                 tipo VARCHAR(10), dia DATE, trayecto VARCHAR(10));
+INSERT INTO tmp_viaje VALUES
+(1, 'Londres', 'Edimburgo', 'BUS', '2027-01-12', 'IDA'),
+(1, 'Edimburgo', 'Londres', 'BUS', '2027-01-21', 'VUELTA'),
+(2, 'Estambul', 'Atenas', 'AVION', '2027-01-19', 'IDA'),
+(2, 'Atenas', 'Estambul', 'AVION', '2027-01-23', 'VUELTA'),
+(3, 'Estambul', 'Atenas', 'AVION', '2026-12-04', 'IDA'),
+(3, 'Atenas', 'Estambul', 'AVION', '2026-12-14', 'VUELTA'),
+(4, 'Viena', 'Budapest', 'TREN', '2027-01-04', 'IDA'),
+(4, 'Budapest', 'Viena', 'TREN', '2027-01-14', 'VUELTA'),
+(5, 'Ámsterdam', 'Bruselas', 'BUS', '2027-01-17', 'IDA'),
+(5, 'Bruselas', 'Ámsterdam', 'BUS', '2027-01-23', 'VUELTA'),
+(6, 'París', 'Londres', 'TREN', '2026-12-31', 'IDA'),
+(6, 'Londres', 'París', 'TREN', '2027-01-10', 'VUELTA'),
+(7, 'Roma', 'Florencia', 'TREN', '2027-01-14', 'IDA'),
+(8, 'Barcelona', 'Madrid', 'TREN', '2027-01-04', 'IDA'),
+(8, 'Madrid', 'Barcelona', 'TREN', '2027-01-10', 'VUELTA'),
+(9, 'Estambul', 'Atenas', 'AVION', '2026-12-22', 'IDA'),
+(9, 'Atenas', 'Estambul', 'AVION', '2026-12-30', 'VUELTA'),
+(10, 'Bruselas', 'Ámsterdam', 'BUS', '2026-12-12', 'IDA'),
+(10, 'Ámsterdam', 'Bruselas', 'BUS', '2026-12-16', 'VUELTA'),
+(11, 'Londres', 'Mánchester', 'BUS', '2026-12-27', 'IDA'),
+(11, 'Mánchester', 'Londres', 'BUS', '2026-12-30', 'VUELTA'),
+(12, 'Ámsterdam', 'Bruselas', 'BUS', '2027-01-08', 'IDA'),
+(13, 'Oporto', 'Lisboa', 'TREN', '2027-01-11', 'IDA'),
+(14, 'Madrid', 'París', 'AVION', '2027-01-16', 'IDA'),
+(15, 'Milán', 'Niza', 'BUS', '2027-01-01', 'IDA'),
+(16, 'Barcelona', 'París', 'AVION', '2026-12-05', 'IDA'),
+(17, 'Barcelona', 'París', 'AVION', '2026-12-13', 'IDA'),
+(17, 'París', 'Barcelona', 'AVION', '2026-12-21', 'VUELTA'),
+(18, 'Milán', 'Madrid', 'AVION', '2026-12-23', 'IDA'),
+(18, 'Madrid', 'Milán', 'AVION', '2026-12-31', 'VUELTA'),
+(19, 'Viena', 'Budapest', 'TREN', '2027-01-10', 'IDA'),
+(19, 'Budapest', 'Viena', 'TREN', '2027-01-19', 'VUELTA'),
+(20, 'Madrid', 'Barcelona', 'AVION', '2027-01-08', 'IDA'),
+(21, 'Atenas', 'Madrid', 'AVION', '2026-12-13', 'IDA'),
+(21, 'Madrid', 'Atenas', 'AVION', '2026-12-17', 'VUELTA'),
+(22, 'Mánchester', 'Londres', 'BUS', '2027-01-02', 'IDA'),
+(22, 'Londres', 'Mánchester', 'BUS', '2027-01-11', 'VUELTA'),
+(23, 'Milán', 'Niza', 'BUS', '2027-01-16', 'IDA'),
+(23, 'Niza', 'Milán', 'BUS', '2027-01-23', 'VUELTA'),
+(24, 'Milán', 'Niza', 'BUS', '2026-12-21', 'IDA'),
+(24, 'Niza', 'Milán', 'BUS', '2026-12-25', 'VUELTA'),
+(25, 'Budapest', 'Viena', 'TREN', '2026-12-13', 'IDA'),
+(25, 'Viena', 'Budapest', 'TREN', '2026-12-17', 'VUELTA'),
+(26, 'Viena', 'Budapest', 'TREN', '2027-01-19', 'IDA'),
+(27, 'Atenas', 'Estambul', 'AVION', '2027-01-09', 'IDA'),
+(27, 'Estambul', 'Atenas', 'AVION', '2027-01-15', 'VUELTA'),
+(28, 'Madrid', 'Milán', 'AVION', '2026-12-24', 'IDA'),
+(28, 'Milán', 'Madrid', 'AVION', '2026-12-27', 'VUELTA'),
+(29, 'Ginebra', 'Zúrich', 'TREN', '2026-12-06', 'IDA'),
+(29, 'Zúrich', 'Ginebra', 'TREN', '2026-12-16', 'VUELTA'),
+(30, 'Londres', 'Edimburgo', 'BUS', '2026-12-17', 'IDA'),
+(31, 'Zúrich', 'Ginebra', 'TREN', '2026-12-06', 'IDA'),
+(32, 'Niza', 'Milán', 'BUS', '2026-12-05', 'IDA'),
+(32, 'Milán', 'Niza', 'BUS', '2026-12-09', 'VUELTA'),
+(33, 'Roma', 'Milán', 'BUS', '2027-01-03', 'IDA'),
+(33, 'Milán', 'Roma', 'BUS', '2027-01-12', 'VUELTA'),
+(34, 'París', 'Madrid', 'AVION', '2026-12-05', 'IDA'),
+(34, 'Madrid', 'París', 'AVION', '2026-12-11', 'VUELTA'),
+(35, 'París', 'Madrid', 'AVION', '2026-12-24', 'IDA'),
+(36, 'Estambul', 'Atenas', 'AVION', '2026-12-01', 'IDA'),
+(36, 'Atenas', 'Estambul', 'AVION', '2026-12-08', 'VUELTA'),
+(37, 'Mánchester', 'Londres', 'BUS', '2026-12-07', 'IDA'),
+(38, 'Madrid', 'Barcelona', 'AVION', '2026-12-19', 'IDA'),
+(38, 'Barcelona', 'Madrid', 'AVION', '2026-12-22', 'VUELTA'),
+(39, 'Roma', 'Florencia', 'TREN', '2026-12-22', 'IDA'),
+(40, 'Milán', 'Niza', 'BUS', '2027-01-06', 'IDA'),
+(40, 'Niza', 'Milán', 'BUS', '2027-01-10', 'VUELTA');
+
+CREATE TEMPORARY TABLE tmp_pasajero (idDetalle BIGINT, idReserva BIGINT, pn VARCHAR(20), sn VARCHAR(20),
+    pa VARCHAR(20), sa VARCHAR(20), ident VARCHAR(20), asiento VARCHAR(10), tipoId VARCHAR(40), plan VARCHAR(30));
+INSERT INTO tmp_pasajero VALUES
+(1, 1, 'Diego', 'Alejandro', 'Cano', 'Duque', '16234567', '22B', 'CC', 'Básico'),
+(1, 2, 'Diego', 'Alejandro', 'Cano', 'Duque', '16234567', '17A', 'CC', 'Clásico'),
+(1, 3, 'Pedro', 'Luis', 'Martínez', 'Ruiz', '80123456', '18C', 'CC', 'Clásico'),
+(2, 3, 'Valeria', NULL, 'Duque', 'Cano', '1164313893', '21B', 'CC', 'Flexible'),
+(1, 4, 'Lucía', NULL, 'Fernández', 'Gil', 'X1234567', '5B', 'PA', 'Básico'),
+(1, 5, 'Pedro', 'Luis', 'Martínez', 'Ruiz', '80123456', '5F', 'CC', 'Básico'),
+(2, 5, 'Esteban', 'José', 'Salazar', 'Mejía', '1118767100', '2F', 'CC', 'Clásico'),
+(1, 6, 'Lucía', NULL, 'Fernández', 'Gil', 'X1234567', '17E', 'PA', 'Flexible'),
+(1, 7, 'Ana', 'María', 'Gutiérrez', 'Londoño', '1094567811', '10C', 'CC', 'Premium'),
+(2, 7, 'Esteban', 'José', 'Salazar', 'Mejía', '1082757580', '12F', 'CC', 'Básico'),
+(3, 7, 'Emilia', NULL, 'Fernández', 'Gil', '1056672226', '3C', 'TI', 'Básico'),
+(1, 8, 'Pedro', 'Luis', 'Martínez', 'Ruiz', '80123456', '10B', 'CC', 'Flexible'),
+(2, 8, 'Sofía', NULL, 'Ramírez', 'Torres', '1045029528', '25A', 'CC', 'Flexible'),
+(1, 9, 'Ana', 'María', 'Gutiérrez', 'Londoño', '1094567811', '3E', 'CC', 'Clásico'),
+(1, 10, 'Lucía', NULL, 'Fernández', 'Gil', 'X1234567', '24E', 'PA', 'Clásico'),
+(1, 11, 'Diego', 'Alejandro', 'Cano', 'Duque', '16234567', '20B', 'CC', 'Flexible'),
+(2, 11, 'Paula', 'Andrea', 'Ríos', 'Montoya', '1085478416', '40C', 'CC', 'Flexible'),
+(1, 12, 'Diego', 'Alejandro', 'Cano', 'Duque', '16234567', '40E', 'CC', 'Básico'),
+(2, 12, 'Camilo', NULL, 'Herrera', 'Zapata', '1157794249', '22B', 'CC', 'Clásico'),
+(1, 13, 'Pedro', 'Luis', 'Martínez', 'Ruiz', '80123456', '2C', 'CC', 'Básico'),
+(2, 13, 'Emilia', NULL, 'Fernández', 'Gil', '1106931935', '13A', 'TI', 'Básico'),
+(3, 13, 'Esteban', 'José', 'Salazar', 'Mejía', '1138058647', '24C', 'CC', 'Clásico'),
+(1, 14, 'Pedro', 'Luis', 'Martínez', 'Ruiz', '80123456', '28A', 'CC', 'Clásico'),
+(2, 14, 'Gabriel', NULL, 'Moreno', 'Silva', '1164430105', '29B', 'CE', 'Básico'),
+(3, 14, 'Tomás', NULL, 'Martínez', 'Ruiz', '1111547584', '13D', 'TI', 'Básico'),
+(1, 15, 'Ana', 'María', 'Gutiérrez', 'Londoño', '1094567811', '20E', 'CC', 'Clásico'),
+(2, 15, 'Javier', NULL, 'López', 'Sanz', 'P6959814', '23C', 'PA', 'Clásico'),
+(1, 16, 'Lucía', NULL, 'Fernández', 'Gil', 'X1234567', '29C', 'PA', 'Básico'),
+(1, 17, 'Ana', 'María', 'Gutiérrez', 'Londoño', '1094567811', '2D', 'CC', 'Clásico'),
+(2, 17, 'Tomás', NULL, 'Martínez', 'Ruiz', '1041223592', '22F', 'TI', 'Clásico'),
+(3, 17, 'Javier', NULL, 'López', 'Sanz', 'P6886774', '13A', 'PA', 'Flexible'),
+(1, 18, 'Ana', 'María', 'Gutiérrez', 'Londoño', '1094567811', '8D', 'CC', 'Clásico'),
+(2, 18, 'Natalia', 'Isabel', 'Castro', 'Vélez', '1011598192', '16C', 'CC', 'Básico'),
+(1, 19, 'Pedro', 'Luis', 'Martínez', 'Ruiz', '80123456', '24B', 'CC', 'Básico'),
+(1, 20, 'Ana', 'María', 'Gutiérrez', 'Londoño', '1094567811', '9C', 'CC', 'Flexible'),
+(1, 21, 'Pedro', 'Luis', 'Martínez', 'Ruiz', '80123456', '19E', 'CC', 'Clásico'),
+(1, 22, 'Lucía', NULL, 'Fernández', 'Gil', 'X1234567', '25B', 'PA', 'Clásico'),
+(2, 22, 'Camilo', NULL, 'Herrera', 'Zapata', '1141936776', '38D', 'CC', 'Clásico'),
+(1, 23, 'Lucía', NULL, 'Fernández', 'Gil', 'X1234567', '30C', 'PA', 'Clásico'),
+(1, 24, 'Lucía', NULL, 'Fernández', 'Gil', 'X1234567', '9B', 'PA', 'Clásico'),
+(1, 25, 'Ana', 'María', 'Gutiérrez', 'Londoño', '1094567811', '3A', 'CC', 'Clásico'),
+(2, 25, 'Mariana', NULL, 'Gutiérrez', 'Londoño', '1064555291', '22C', 'TI', 'Clásico'),
+(1, 26, 'Diego', 'Alejandro', 'Cano', 'Duque', '16234567', '25E', 'CC', 'Básico'),
+(1, 27, 'Ana', 'María', 'Gutiérrez', 'Londoño', '1094567811', '10F', 'CC', 'Premium'),
+(1, 28, 'Ana', 'María', 'Gutiérrez', 'Londoño', '1094567811', '11E', 'CC', 'Premium'),
+(2, 28, 'Natalia', 'Isabel', 'Castro', 'Vélez', '1113844081', '25E', 'CC', 'Clásico'),
+(3, 28, 'Tomás', NULL, 'Martínez', 'Ruiz', '1062338411', '6E', 'TI', 'Clásico'),
+(1, 29, 'Ana', 'María', 'Gutiérrez', 'Londoño', '1094567811', '1F', 'CC', 'Básico'),
+(2, 29, 'Tomás', NULL, 'Martínez', 'Ruiz', '1161192600', '9F', 'TI', 'Clásico'),
+(3, 29, 'Emilia', NULL, 'Fernández', 'Gil', '1155795434', '9C', 'TI', 'Flexible'),
+(1, 30, 'Pedro', 'Luis', 'Martínez', 'Ruiz', '80123456', '20D', 'CC', 'Clásico'),
+(2, 30, 'Natalia', 'Isabel', 'Castro', 'Vélez', '1156362808', '21C', 'CC', 'Clásico'),
+(3, 30, 'Esteban', 'José', 'Salazar', 'Mejía', '1053629523', '39B', 'CC', 'Clásico'),
+(1, 31, 'Lucía', NULL, 'Fernández', 'Gil', 'X1234567', '10D', 'PA', 'Flexible'),
+(1, 32, 'Lucía', NULL, 'Fernández', 'Gil', 'X1234567', '27A', 'PA', 'Básico'),
+(2, 32, 'Julián', 'Andrés', 'Gómez', 'Patiño', '1066139505', '40A', 'CC', 'Clásico'),
+(1, 33, 'Diego', 'Alejandro', 'Cano', 'Duque', '16234567', '38C', 'CC', 'Clásico'),
+(1, 34, 'Lucía', NULL, 'Fernández', 'Gil', 'X1234567', '27C', 'PA', 'Clásico'),
+(1, 35, 'Ana', 'María', 'Gutiérrez', 'Londoño', '1094567811', '8D', 'CC', 'Clásico'),
+(2, 35, 'Paula', 'Andrea', 'Ríos', 'Montoya', '1186121156', '11D', 'CC', 'Clásico'),
+(3, 35, 'Julián', 'Andrés', 'Gómez', 'Patiño', '1084514036', '29F', 'CC', 'Clásico'),
+(1, 36, 'Pedro', 'Luis', 'Martínez', 'Ruiz', '80123456', '10F', 'CC', 'Básico'),
+(1, 37, 'Pedro', 'Luis', 'Martínez', 'Ruiz', '80123456', '18F', 'CC', 'Clásico'),
+(2, 37, 'Natalia', 'Isabel', 'Castro', 'Vélez', '1009568623', '18B', 'CC', 'Premium'),
+(1, 38, 'Lucía', NULL, 'Fernández', 'Gil', 'X1234567', '30E', 'PA', 'Premium'),
+(2, 38, 'Natalia', 'Isabel', 'Castro', 'Vélez', '1184662809', '23E', 'CC', 'Clásico'),
+(3, 38, 'Gabriel', NULL, 'Moreno', 'Silva', '1099486244', '2B', 'CE', 'Flexible'),
+(1, 39, 'Pedro', 'Luis', 'Martínez', 'Ruiz', '80123456', '16D', 'CC', 'Clásico'),
+(2, 39, 'Valeria', NULL, 'Duque', 'Cano', '1090435610', '26B', 'CC', 'Clásico'),
+(3, 39, 'Mariana', NULL, 'Gutiérrez', 'Londoño', '1035369602', '4C', 'TI', 'Flexible'),
+(4, 39, 'Tomás', NULL, 'Martínez', 'Ruiz', '1101277785', '11E', 'TI', 'Clásico'),
+(1, 40, 'Pedro', 'Luis', 'Martínez', 'Ruiz', '80123456', '5A', 'CC', 'Premium'),
+(2, 40, 'Natalia', 'Isabel', 'Castro', 'Vélez', '1168994780', '6E', 'CC', 'Flexible');
+
+INSERT INTO Reserva (idReserva, fechaReserva, Empleado_idUsuario, Cliente_idUsuario, idOferta, idEstadoReserva)
+SELECT t.idReserva, t.fechaReserva, ue.idUsuario, uc.idUsuario, o.idOferta, er.idEstadoReserva
+FROM tmp_reserva t
+JOIN Usuario uc          ON uc.correo = t.cliente
+LEFT JOIN Usuario ue     ON ue.correo = t.empleado
+LEFT JOIN Oferta o       ON o.titulo = t.oferta
+JOIN EstadoReserva er    ON er.nombreEstadoReserva = t.estado
+ORDER BY t.idReserva;
+
+-- Cada viaje toma la primera salida de ese día de la ruta (origen, destino, tipo de transporte).
+INSERT INTO ReservaViaje (idReserva, idProgramacionViaje, idTipoTrayecto)
+SELECT t.idReserva,
+       (SELECT MIN(pv.idProgramacionViaje)
+        FROM ProgramacionViaje pv
+        JOIN Ruta ru           ON ru.idRuta = pv.idRuta
+        JOIN Ciudad co         ON co.idCiudad = ru.idCiudadOrigen
+        JOIN Ciudad cd         ON cd.idCiudad = ru.idCiudadDestino
+        JOIN RutaVehiculo rv   ON rv.idRuta = ru.idRuta
+        JOIN Vehiculo v        ON v.idVehiculo = rv.idVehiculo
+        JOIN TipoTransporte tt ON tt.idTipoTransporte = v.idTipoTransporte
+        WHERE co.nombreCiudad = t.origen
+          AND cd.nombreCiudad = t.destino
+          AND tt.nombreTipoTransporte = t.tipo
+          AND pv.fechaHoraSalida >= t.dia
+          AND pv.fechaHoraSalida <  t.dia + INTERVAL 1 DAY),
+       tr.idTipoTrayecto
+FROM tmp_viaje t
+JOIN TipoTrayecto tr ON tr.nombreTipoTrayecto = t.trayecto;
+
+INSERT INTO DetalleReserva (idDetalle, idReserva, primerNombre, segundoNombre, primerApellido, segundoApellido,
+                            identificacion, numeroAsiento, idTipoIdentificacion, idPlan)
+SELECT t.idDetalle, t.idReserva, t.pn, t.sn, t.pa, t.sa, t.ident, t.asiento, ti.idTipoIdentificacion, p.idPlan
+FROM tmp_pasajero t
+JOIN TipoIdentificacion ti ON ti.nombreIdentificacion = t.tipoId
+JOIN Plan p                ON p.nombrePlan = t.plan;
+
+-- Transacción APROBADA y su factura (se emiten juntas, igual que en POST /api/reservas/{id}/pago).
+INSERT INTO Transaccion (idReserva, montoPagado, fechaPago, idMetodoPago, idEstadoTransaccion)
+SELECT t.idReserva, t.monto, t.fechaPago, mp.idMetodoPago, et.idEstadoTransaccion
+FROM tmp_reserva t
+JOIN MetodoPago mp        ON mp.nombreMetodoPago = t.metodoPago
+JOIN EstadoTransaccion et ON et.nombreEstadoTransaccion = 'APROBADA'
+WHERE t.estado = 'CONFIRMADA';
+
+INSERT INTO Factura (idReserva, fechaEmision)
+SELECT t.idReserva, t.fechaPago
+FROM tmp_reserva t
+WHERE t.estado = 'CONFIRMADA';
+
+DROP TEMPORARY TABLE tmp_pasajero;
+DROP TEMPORARY TABLE tmp_viaje;
+DROP TEMPORARY TABLE tmp_reserva;
+
+-- ---------------- Notificaciones de las ofertas ----------------
+-- Igual que al crear una oferta por la API: una notificación ENVIADA por oferta, para todos los clientes.
+INSERT INTO Notificacion (mensaje, fechaEnvio, idEstadoNotificacion, idOferta)
+SELECT CONCAT('¡Nueva oferta! ', o.titulo, ': ', ROUND(o.porcentajeDescuento), '% de descuento del ',
+              DATE_FORMAT(o.fechaInicio, '%d/%m/%Y'), ' al ', DATE_FORMAT(o.fechaFin, '%d/%m/%Y'), '. ',
+              COALESCE(o.descripcion, '')),
+       LEAST(TIMESTAMP(o.fechaInicio, '08:00:00'), NOW()),
+       en.idEstadoNotificacion,
+       o.idOferta
+FROM Oferta o
+JOIN EstadoNotificacion en ON en.nombreEstadoNotificacion = 'ENVIADO'
+ORDER BY o.idOferta;
+
+INSERT INTO ClienteNotificacion (idUsuario, idNotificacion)
+SELECT c.idUsuario, n.idNotificacion
+FROM Notificacion n
+CROSS JOIN Cliente c
+WHERE n.idOferta IS NOT NULL;
+
 -- ---------------- Plantilla: repetir UNA ruta cada N horas ----------------
 -- Cambia el id de la ruta, el inicio, el fin y el intervalo. Ejemplo: ruta 1,
 -- cada 8 horas durante febrero. (También existe el endpoint
@@ -1579,3 +1881,8 @@ DROP TEMPORARY TABLE tmp_ruta;
 --   SELECT COUNT(*) FROM Cliente;            -- 4
 --   SELECT COUNT(*) FROM Ruta;               -- 798
 --   SELECT COUNT(*) FROM ProgramacionViaje;  -- 93868 (1514 salidas/día x 62 días)
+--   SELECT COUNT(*) FROM Continente;         -- 5
+--   SELECT COUNT(*) FROM Reserva;            -- 40 (35 confirmadas, 2 pendientes, 3 canceladas)
+--   SELECT COUNT(*) FROM DetalleReserva;     -- 73 pasajeros
+--   SELECT COUNT(*) FROM Transaccion;        -- 35 (todas APROBADAS, cada una con su Factura)
+--   SELECT COUNT(*) FROM Notificacion;       -- 6 (una por oferta, enviada a los 4 clientes)

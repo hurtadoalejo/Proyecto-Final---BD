@@ -23,4 +23,6 @@ public interface EmpleadoRepository extends JpaRepository<Empleado, Long> {
            order by e.nombre.primerApellido, e.nombre.primerNombre
            """)
     List<Empleado> listar(@Param("idSede") Long idSede);
+
+    long countBySedeIdSede(Long idSede);
 }

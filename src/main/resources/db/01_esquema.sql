@@ -86,12 +86,21 @@ CREATE TABLE TipoTrayecto (
 -- ---------------------------------------------------------------------
 -- Ubicación: Pais -> Departamento -> Ciudad
 -- ---------------------------------------------------------------------
+CREATE TABLE Continente (
+    idContinente      BIGINT       NOT NULL AUTO_INCREMENT,
+    nombreContinente  VARCHAR(25)  NOT NULL,
+    CONSTRAINT Continente_PK PRIMARY KEY (idContinente),
+    CONSTRAINT Continente_nombre_UK UNIQUE (nombreContinente)
+);
+
 CREATE TABLE Pais (
-    idPais      BIGINT       NOT NULL AUTO_INCREMENT,
-    nombrePais  VARCHAR(25)  NOT NULL,
-    indicativo  INT,                     -- indicativo telefónico (57, 1, 34...)
+    idPais                   BIGINT       NOT NULL AUTO_INCREMENT,
+    indicativoPais           INT,                     -- indicativo telefónico (57, 1, 34...)
+    nombrePais               VARCHAR(25)  NOT NULL,
+    Continente_idContinente  BIGINT       NOT NULL,
     CONSTRAINT Pais_PK PRIMARY KEY (idPais),
-    CONSTRAINT Pais_nombre_UK UNIQUE (nombrePais)
+    CONSTRAINT Pais_nombre_UK UNIQUE (nombrePais),
+    CONSTRAINT Pais_Continente_FK FOREIGN KEY (Continente_idContinente) REFERENCES Continente (idContinente)
 );
 
 CREATE TABLE Departamento (

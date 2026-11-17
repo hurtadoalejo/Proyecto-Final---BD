@@ -148,13 +148,25 @@ Administrador creado al arrancar: `admin@viajacol.com` / `AdminViajaCol2026` (ro
 
 ## 4. Catálogos (listas desplegables) – `GET`
 
+**Ubicaciones completas** – forma `{ país: { departamento: [ciudades] } }`, igual a `UBICACIONES` de `Register.tsx` (un país sin ciudades sale como `{}`):
+
 | Endpoint | Devuelve |
 |---|---|
+| `/api/catalogos/ubicaciones/no-europa` | países que **no** son de Europa (clientes y sedes): `{ "Colombia": { "Antioquia": ["Medellín", "Envigado"], ... }, "Estados Unidos": { ... }, ... }` |
+| `/api/catalogos/ubicaciones/europa` | países de Europa (España y los de las rutas): `{ "España": { "Andalucía": ["Sevilla", "Málaga"], ... }, "Francia": { "Isla de Francia": ["París"], ... }, ... }` |
+| `/api/catalogos/ubicaciones` | todos los países |
+| `/api/catalogos/indicativos/no-europa` | nombre e indicativo de los países que no son de Europa: `[{ "idPais": 1, "nombrePais": "Colombia", "indicativo": "+57" }, ...]` |
+
+**Consultas individuales:**
+
+| Endpoint | Devuelve |
+|---|---|
+| `/api/catalogos/continentes` | `[{ "id": 1, "nombre": "América" }, { "id": 2, "nombre": "Europa" }, ...]` |
+| `/api/catalogos/continentes/{idContinente}/paises` | `[{ "id": 1, "nombre": "Colombia" }, ...]` |
 | `/api/catalogos/paises` | `[{ "id": 1, "nombre": "Colombia" }, ...]` |
-| `/api/catalogos/indicativos` | `[{ "idPais": 1, "nombrePais": "Colombia", "indicativo": "+57" }, ...]` (opcional: el front ya los tiene) |
+| `/api/catalogos/indicativos` | indicativos de todos los países, mismo formato que `/indicativos/no-europa` |
 | `/api/catalogos/paises/{idPais}/departamentos` | `[{ "id": 25, "nombre": "Quindío" }, ...]` |
 | `/api/catalogos/departamentos/{idDepartamento}/ciudades` | `[{ "id": 3, "nombre": "Armenia" }, ...]` |
-| `/api/catalogos/ubicaciones` | **misma forma que `UBICACIONES` de `Register.tsx`**: `{ "Colombia": { "Antioquia": ["Medellín", "Envigado"], ... }, ... }`. Sirve para los selects de registro, sedes y empleados (solo países de clientes y sedes, no los de rutas) |
 | `/api/catalogos/ciudades-destino` | ciudades con rutas (las 32 de `EUROPEAN_CITIES`): `[{ "idCiudad", "nombreCiudad", "idDepartamento", "nombreDepartamento", "idPais", "nombrePais" }]` |
 | `/api/catalogos/tipos-identificacion` | CC, CE, TI, PA, PEP |
 | `/api/catalogos/tipos-transporte` | AVION, BUS, TREN |
@@ -248,9 +260,9 @@ Todos siguen el mismo patrón: `GET /api/x` (lista, con filtro opcional), `GET /
 |---|---|---|
 | `/api/clientes` (sin POST: se usa el registro) | igual al registro, sin `contrasena` | `?q=` identificación o apellido |
 | `/api/empleados` | registro + `salario`, `fechaContratacion` ("2026-01-15"), `idCargo`, `idSede`, `rol` (EMPLEADO o ADMIN). En PUT sin `contrasena` | `?idSede=` |
-| `/api/sedes` | `{ nombreSede, direccion, pais, departamento, ciudad }` (por nombre, como en `/api/catalogos/ubicaciones`) | `?q=` |
+| `/api/sedes` | `{ nombreSede, direccion, pais, departamento, ciudad }` (por nombre, como en `/api/catalogos/ubicaciones/no-europa`). `DELETE` responde **409** con el motivo si la sede tiene empleados: *"No se puede eliminar la sede Sede Cali: tiene 1 empleado trabajando en ella. Reasígnalos a otra sede primero"* | `?q=` |
 | `/api/planes` | `{ nombrePlan, descripcionPlan, pesoMaxEquipaje, incluyeCheckIn, precioExtra }` | `?q=` |
-| `/api/ofertas` | `{ titulo, descripcion, porcentajeDescuento, fechaInicio, fechaFin }` | `?vigentes=true` |
+| `/api/ofertas` | `{ titulo, descripcion, porcentajeDescuento, fechaInicio, fechaFin }`. Al crearla se registra **automáticamente** una notificación ENVIADA a todos los clientes (simulada: solo queda en la BD; se ve en `GET /api/notificaciones`). Al eliminarla se borran también sus notificaciones | `?vigentes=true` |
 | `/api/vehiculos` | `{ codigoIdentificacion, tipoTransporte, capacidad }` | `?q=` |
 | `/api/rutas` | `{ idCiudadOrigen, direccionOrigen, idCiudadDestino, direccionDestino, distancia, duracionEstimada, precioBase, idVehiculo }` | `?q=` nombre de ciudad |
 | `/api/programaciones` | `{ idRuta, fechaHoraSalida: "2026-12-20T08:30:00" }` | `?idRuta=&desde=2026-12-01&hasta=2026-12-07` (máx. 31 días; por defecto los próximos 7) |
@@ -265,7 +277,21 @@ Extras de programación:
   `cadaHoras`: 24 = diaria, 168 = semanal, 8 = tres al día. Respuesta: `{ "creadas": 31, "omitidas": 0, "salidas": [...] }` (las que ya existían se omiten).
 - `GET /api/programaciones/{id}/asientos` → `{ idProgramacionViaje, capacidad, asientosOcupados, asientosDisponibles }`.
 
-## 7. Formato de errores
+## 7. Reportes – `GET /api/reportes/...`
+
+Todos devuelven una lista JSON lista para tabla o gráfico. Ventas e ingresos cuentan solo pagos **APROBADOS**; los pasajeros no cuentan reservas **CANCELADAS**. La base trae 40 reservas de ejemplo (35 pagadas) para que los reportes tengan datos.
+
+| Endpoint | Fila de la respuesta |
+|---|---|
+| `/ventas-mensuales` (`?anio=2026` opcional) | `{ "periodo": "2026-11", "cantidadVentas": 8, "totalVendido": 6123000.00 }` |
+| `/ingresos-metodo-pago` | `{ "metodoPago": "PSE", "cantidadPagos": 10, "totalIngresos": 9000000.00, "porcentaje": 28.50 }` |
+| `/reservas-por-empleado` | `{ "idEmpleado": 5, "nombreEmpleado": "Carlos Restrepo Gómez", "cargo": "Asesor de ventas", "sede": "Sede Principal Medellín", "cantidadReservas": 7, "totalVendido": 5400000.00 }` |
+| `/rutas-mas-pasajeros` (`?limite=10`) | `{ "idRuta": 3, "origen": "Madrid", "destino": "París", "tipoTransporte": "AVION", "reservas": 4, "pasajeros": 9, "promedioCategoria": null }` |
+| `/clientes-sobre-promedio` | `{ "idCliente": 13, "nombreCliente": "Ana Gutiérrez Londoño", "correo": "...", "cantidadReservas": 12, "totalGastado": 15484600.00, "promedioClientes": 7894067.50 }` |
+| `/rutas-bajo-promedio` (`?tipo=AVION\|BUS\|TREN` opcional) | rutas con **menos** pasajeros que el promedio de su tipo (las menos eficientes); mismo formato que `/rutas-mas-pasajeros`, con `promedioCategoria` lleno |
+| `/rutas-sobre-promedio` (`?tipo=` opcional) | rutas más vendidas de cada tipo: **más** pasajeros que el promedio de su tipo; mismo formato |
+
+## 8. Formato de errores
 
 Todos los errores usan el mismo formato (`application/problem+json`):
 

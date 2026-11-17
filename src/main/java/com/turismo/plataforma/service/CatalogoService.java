@@ -6,14 +6,19 @@ import com.turismo.plataforma.dto.catalogo.IndicativoResponse;
 import com.turismo.plataforma.exception.SolicitudInvalidaException;
 import com.turismo.plataforma.model.catalogo.*;
 import com.turismo.plataforma.model.ubicacion.Ciudad;
+import com.turismo.plataforma.model.ubicacion.Continente;
 import com.turismo.plataforma.model.ubicacion.Departamento;
 import com.turismo.plataforma.model.ubicacion.Pais;
 import com.turismo.plataforma.repository.*;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 /**
  * Tablas catálogo (Rol, TipoIdentificacion, Cargo, estados...) y ubicación (País, Departamento, Ciudad).
@@ -33,6 +38,7 @@ public class CatalogoService {
     private final MetodoPagoRepository metodoPagoRepository;
     private final TipoTransporteRepository tipoTransporteRepository;
     private final TipoTrayectoRepository tipoTrayectoRepository;
+    private final ContinenteRepository continenteRepository;
     private final PaisRepository paisRepository;
     private final DepartamentoRepository departamentoRepository;
     private final CiudadRepository ciudadRepository;
@@ -46,6 +52,7 @@ public class CatalogoService {
                            MetodoPagoRepository metodoPagoRepository,
                            TipoTransporteRepository tipoTransporteRepository,
                            TipoTrayectoRepository tipoTrayectoRepository,
+                           ContinenteRepository continenteRepository,
                            PaisRepository paisRepository,
                            DepartamentoRepository departamentoRepository,
                            CiudadRepository ciudadRepository) {
@@ -58,6 +65,7 @@ public class CatalogoService {
         this.metodoPagoRepository = metodoPagoRepository;
         this.tipoTransporteRepository = tipoTransporteRepository;
         this.tipoTrayectoRepository = tipoTrayectoRepository;
+        this.continenteRepository = continenteRepository;
         this.paisRepository = paisRepository;
         this.departamentoRepository = departamentoRepository;
         this.ciudadRepository = ciudadRepository;
@@ -65,17 +73,38 @@ public class CatalogoService {
 
     // ------------------------------------------------------------------ listas
 
+    public List<CatalogoItem> continentes() {
+        return continenteRepository.findAllByOrderByIdContinente().stream()
+                .map(c -> new CatalogoItem(c.getIdContinente(), c.getNombreContinente()))
+                .toList();
+    }
+
+    public List<CatalogoItem> paisesPorContinente(Long idContinente) {
+        return paisRepository.findByContinenteIdContinenteOrderByNombrePais(idContinente).stream()
+                .map(p -> new CatalogoItem(p.getIdPais(), p.getNombrePais()))
+                .toList();
+    }
+
     public List<CatalogoItem> paises() {
         return paisRepository.findAllByOrderByNombrePais().stream()
                 .map(p -> new CatalogoItem(p.getIdPais(), p.getNombrePais()))
                 .toList();
     }
 
-    /** Indicativos telefónicos (valor a enviar: indicativo, ej. "+57"). */
+    /** Indicativos telefónicos de todos los países (valor a enviar: indicativo, ej. "+57"). */
     public List<IndicativoResponse> indicativos() {
-        return paisRepository.findAllByOrderByNombrePais().stream()
-                .filter(p -> p.getIndicativo() != null)
-                .map(p -> new IndicativoResponse(p.getIdPais(), p.getNombrePais(), "+" + p.getIndicativo()))
+        return aIndicativos(paisRepository.findAllByOrderByNombrePais());
+    }
+
+    /** Indicativos de los países que no son de Europa. */
+    public List<IndicativoResponse> indicativosFueraDeEuropa() {
+        return aIndicativos(paisRepository.findByContinenteNombreContinenteNotOrderByIdPais(Continente.EUROPA));
+    }
+
+    private static List<IndicativoResponse> aIndicativos(List<Pais> paises) {
+        return paises.stream()
+                .filter(p -> p.getIndicativoPais() != null)
+                .map(p -> new IndicativoResponse(p.getIdPais(), p.getNombrePais(), "+" + p.getIndicativoPais()))
                 .toList();
     }
 
@@ -91,30 +120,34 @@ public class CatalogoService {
                 .toList();
     }
 
-    /**
-     * Países, departamentos y ciudades para registro, sedes y empleados, con la misma forma que
-     * UBICACIONES del frontend: { "Colombia": { "Antioquia": ["Medellín", "Envigado"], ... }, ... }.
-     * No incluye los países que solo tienen ciudades de rutas (Francia, Italia...).
-     */
+    /** Todos los países con sus departamentos y ciudades: { "Colombia": { "Antioquia": ["Medellín", ...] } }. */
     public Map<String, Map<String, List<String>>> ubicaciones() {
-        Set<Long> ciudadesConRutas = ciudadRepository.listarConRutas().stream()
-                .map(Ciudad::getIdCiudad)
-                .collect(Collectors.toSet());
-        List<Ciudad> ciudades = ciudadRepository.listarConUbicacion();
-        Set<String> paisesConUbicaciones = ciudades.stream()
-                .filter(c -> !ciudadesConRutas.contains(c.getIdCiudad()))
-                .map(c -> c.getDepartamento().getPais().getNombrePais())
-                .collect(Collectors.toSet());
+        return armarUbicaciones(paisRepository.findAll(Sort.by("idPais")));
+    }
 
+    /** Países de Europa con sus departamentos y ciudades (las ciudades de las rutas y España). */
+    public Map<String, Map<String, List<String>>> ubicacionesEuropa() {
+        return armarUbicaciones(paisRepository.findByContinenteNombreContinenteOrderByIdPais(Continente.EUROPA));
+    }
+
+    /** Países que no son de Europa con sus departamentos y ciudades (clientes y sedes). */
+    public Map<String, Map<String, List<String>>> ubicacionesFueraDeEuropa() {
+        return armarUbicaciones(paisRepository.findByContinenteNombreContinenteNotOrderByIdPais(Continente.EUROPA));
+    }
+
+    /** { país: { departamento: [ciudades] } } en el orden de carga. Un país sin ciudades queda como {}. */
+    private Map<String, Map<String, List<String>>> armarUbicaciones(List<Pais> paises) {
         Map<String, Map<String, List<String>>> ubicaciones = new LinkedHashMap<>();
-        for (Ciudad ciudad : ciudades) {
+        paises.forEach(p -> ubicaciones.put(p.getNombrePais(), new LinkedHashMap<>()));
+        if (paises.isEmpty()) {
+            return ubicaciones;
+        }
+        List<Long> ids = paises.stream().map(Pais::getIdPais).toList();
+        for (Ciudad ciudad : ciudadRepository.listarPorPaises(ids)) {
             Departamento departamento = ciudad.getDepartamento();
-            String pais = departamento.getPais().getNombrePais();
-            if (paisesConUbicaciones.contains(pais)) {
-                ubicaciones.computeIfAbsent(pais, p -> new LinkedHashMap<>())
-                        .computeIfAbsent(departamento.getNombreDepartamento(), d -> new ArrayList<>())
-                        .add(ciudad.getNombreCiudad());
-            }
+            ubicaciones.get(departamento.getPais().getNombrePais())
+                    .computeIfAbsent(departamento.getNombreDepartamento(), d -> new ArrayList<>())
+                    .add(ciudad.getNombreCiudad());
         }
         return ubicaciones;
     }
