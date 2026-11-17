@@ -144,7 +144,7 @@ Administrador creado al arrancar: `admin@viajacol.com` / `AdminViajaCol2026` (ro
 
 `duracionEstimada` en minutos · `distancia` en km · `precioTotal` = `precioBase` × pasajeros (sin plan ni oferta). El `idProgramacionViaje` elegido es el que se manda al crear la reserva.
 
-**Rutas:** 798 (ida y vuelta) que conectan ~80 % de los pares entre las 32 ciudades de `EUROPEAN_CITIES`; cada ciudad tiene entre 20 y 28 destinos directos. Hay salidas **todos los días del 01-dic-2026 al 31-ene-2027**: avión ida 06:30 y 15:30 / vuelta 11:00 y 20:00 · tren ida 07:00 y 15:00 / vuelta 11:00 y 19:00 · bus ida 07:00 / vuelta 19:00. Una búsqueda con fecha de noviembre devuelve `viajes` vacío.
+**Rutas:** 798 (ida y vuelta) que conectan ~80 % de los pares entre las 32 ciudades de `EUROPEAN_CITIES`; cada ciudad tiene entre 20 y 28 destinos directos. Hay **una salida diaria por ruta del 01-dic-2026 al 31-ene-2027**: avión ida 07:00 / vuelta 14:00 · tren ida 08:00 / vuelta 16:00 · bus ida 07:00 / vuelta 19:00 (cada ruta tiene su propio vehículo, para cumplir la regla de 12 horas de descanso). Una búsqueda con fecha de noviembre devuelve `viajes` vacío.
 
 ## 4. Catálogos (listas desplegables) – `GET`
 
@@ -171,7 +171,7 @@ Administrador creado al arrancar: `admin@viajacol.com` / `AdminViajaCol2026` (ro
 | `/api/catalogos/tipos-identificacion` | CC, CE, TI, PA, PEP |
 | `/api/catalogos/tipos-transporte` | AVION, BUS, TREN |
 | `/api/catalogos/tipos-trayecto` | IDA, VUELTA |
-| `/api/catalogos/metodos-pago` | PSE, TARJETA_CREDITO, TARJETA_DEBITO |
+| `/api/catalogos/metodos-pago` | PSE, TARJETA_CREDITO, TARJETA_DEBITO, EFECTIVO (solo para ventas hechas por un empleado) |
 | `/api/catalogos/roles` · `/cargos` · `/estados-reserva` · `/estados-transaccion` · `/estados-notificacion` | `{ id, nombre }` |
 
 Los ids de ejemplo de este documento pueden cambiar; tómalos siempre de estas listas.
@@ -194,14 +194,14 @@ Los ids de ejemplo de este documento pueden cambiar; tómalos siempre de estas l
       "tipoIdentificacion": "CC", "numeroIdentificacion": "1094912345",
       "primerNombre": "Juan", "segundoNombre": null,
       "primerApellido": "Pérez", "segundoApellido": null,
-      "numeroAsiento": "12A",
+      "numeroAsiento": null,
       "idPlan": 1
     }
   ]
 }
 ```
 
-Cada pasajero viaja en todos los viajes de la reserva con el mismo asiento y plan. `idEmpleado` (quien atiende) e `idOferta` son opcionales; la oferta debe estar vigente (`GET /api/ofertas?vigentes=true`). Planes: `GET /api/planes`.
+Cada pasajero viaja en todos los viajes de la reserva con el mismo asiento y plan. **`numeroAsiento` es opcional**: si va en `null`, el backend asigna el primer número libre (1, 2, 3… hasta la capacidad del vehículo) en todas las salidas de la reserva; si se envía (ej. `"12A"`), se respeta y responde 409 si ya está ocupado. Cuando la compra la hace un **empleado**, `idEmpleado` es el id del empleado y `idCliente` el del cliente al que le vende. `idEmpleado` (quien atiende) e `idOferta` son opcionales; la oferta debe estar vigente (`GET /api/ofertas?vigentes=true`). Planes: `GET /api/planes`.
 
 **201 Created** – la reserva queda **PENDIENTE**:
 
@@ -234,6 +234,8 @@ Errores: **400** datos o ids inválidos, asiento repetido dentro de la reserva, 
 { "metodoPago": "TARJETA_CREDITO" }
 ```
 
+`metodoPago`: TARJETA_CREDITO, TARJETA_DEBITO, PSE o **EFECTIVO**. El efectivo solo se acepta si la reserva tiene `idEmpleado` (venta en sede); si no, responde 400.
+
 **201 Created** – la reserva pasa a **CONFIRMADA** y se emite la factura:
 
 ```json
@@ -265,7 +267,7 @@ Todos siguen el mismo patrón: `GET /api/x` (lista, con filtro opcional), `GET /
 | `/api/ofertas` | `{ titulo, descripcion, porcentajeDescuento, fechaInicio, fechaFin }`. Al crearla se registra **automáticamente** una notificación ENVIADA a todos los clientes (simulada: solo queda en la BD; se ve en `GET /api/notificaciones`). Al eliminarla se borran también sus notificaciones | `?vigentes=true` |
 | `/api/vehiculos` | `{ codigoIdentificacion, tipoTransporte, capacidad }` | `?q=` |
 | `/api/rutas` | `{ idCiudadOrigen, direccionOrigen, idCiudadDestino, direccionDestino, distancia, duracionEstimada, precioBase, idVehiculo }` | `?q=` nombre de ciudad |
-| `/api/programaciones` | `{ idRuta, fechaHoraSalida: "2026-12-20T08:30:00" }` | `?idRuta=&desde=2026-12-01&hasta=2026-12-07` (máx. 31 días; por defecto los próximos 7) |
+| `/api/programaciones` | `{ idRuta, fechaHoraSalida: "2026-12-20T08:30:00" }`. **Regla de 12 horas:** el vehículo de la ruta no puede tener otro viaje que empiece antes de 12 h después de que este llegue (ni que llegue menos de 12 h antes de que este salga); si choca responde 409 diciendo con qué salida. También se valida al cambiar el vehículo o la duración de una ruta que ya tiene salidas | `?idRuta=&desde=2026-12-01&hasta=2026-12-07` (máx. 31 días; por defecto los próximos 7) |
 | `/api/notificaciones` | `{ mensaje, estadoNotificacion, idOferta, idsClientes: [2, 5] }` | `?idCliente=` |
 
 Extras de programación:
@@ -274,8 +276,8 @@ Extras de programación:
   ```json
   { "idRuta": 1, "fechaHoraInicio": "2026-12-01T06:00:00", "fechaHoraFin": "2026-12-31T23:59:00", "cadaHoras": 24 }
   ```
-  `cadaHoras`: 24 = diaria, 168 = semanal, 8 = tres al día. Respuesta: `{ "creadas": 31, "omitidas": 0, "salidas": [...] }` (las que ya existían se omiten).
-- `GET /api/programaciones/{id}/asientos` → `{ idProgramacionViaje, capacidad, asientosOcupados, asientosDisponibles }`.
+  `cadaHoras`: 24 = diaria, 168 = semanal. Debe dejar el viaje más 12 horas de descanso (una ruta de 2 h necesita `cadaHoras` ≥ 14; si no, 400). Respuesta: `{ "creadas": 31, "omitidas": 0, "conflictos": 0, "salidas": [...] }` (`omitidas` = ya existían; `conflictos` = chocaban con otro viaje del mismo vehículo).
+- `GET /api/programaciones/{id}/asientos` → `{ idProgramacionViaje, capacidad, asientosOcupados, asientosDisponibles, ocupados: ["1", "2", "12A"] }`.
 
 ## 7. Reportes – `GET /api/reportes/...`
 

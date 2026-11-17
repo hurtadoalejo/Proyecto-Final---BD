@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
@@ -27,6 +28,9 @@ public class ProgramacionViajeService {
     private static final int MAX_DIAS_LISTADO = 31;
     /** Máximo de salidas que crea una sola programación recurrente. */
     private static final int MAX_SALIDAS_RECURRENTES = 1000;
+    /** Horas mínimas entre la llegada de un viaje y la siguiente salida del mismo vehículo. */
+    public static final int HORAS_DESCANSO = 12;
+    private static final DateTimeFormatter FORMATO = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
     private final ProgramacionViajeRepository programacionViajeRepository;
     private final RutaRepository rutaRepository;
@@ -63,7 +67,8 @@ public class ProgramacionViajeService {
         Vehiculo vehiculo = programacion.getRuta().getVehiculo();
         int capacidad = vehiculo == null ? 0 : vehiculo.getCapacidad();
         long ocupados = programacionViajeRepository.contarAsientosOcupados(id);
-        return new DisponibilidadResponse(id, capacidad, ocupados, Math.max(0, capacidad - ocupados));
+        List<String> asientos = programacionViajeRepository.listarAsientosOcupados(id).stream().sorted().toList();
+        return new DisponibilidadResponse(id, capacidad, ocupados, Math.max(0, capacidad - ocupados), asientos);
     }
 
     @Transactional
@@ -71,8 +76,9 @@ public class ProgramacionViajeService {
         Ruta ruta = buscarRutaConVehiculo(request.idRuta());
         LocalDateTime salida = request.fechaHoraSalida().truncatedTo(ChronoUnit.MINUTES);
         if (programacionViajeRepository.existsByRutaIdRutaAndFechaHoraSalida(ruta.getIdRuta(), salida)) {
-            throw new ConflictoException("La ruta " + ruta.getIdRuta() + " ya tiene una salida el " + salida);
+            throw new ConflictoException("La ruta " + ruta.getIdRuta() + " ya tiene una salida el " + salida.format(FORMATO));
         }
+        validarVehiculoLibre(ruta.getVehiculo(), ruta.getDuracionEstimada(), salida, null);
         ProgramacionViaje programacion = new ProgramacionViaje();
         programacion.setRuta(ruta);
         programacion.setFechaHoraSalida(salida);
@@ -81,7 +87,8 @@ public class ProgramacionViajeService {
 
     /**
      * Repite la ruta: una salida en fechaHoraInicio y otra cada "cadaHoras" horas hasta fechaHoraFin.
-     * Las que ya existían se omiten (no es error).
+     * Las que ya existían se omiten y las que chocan con otro viaje del vehículo se cuentan como conflictos
+     * (no es error). cadaHoras debe dejar al vehículo 12 horas de descanso entre una salida y la siguiente.
      */
     @Transactional
     public ProgramacionRecurrenteResponse crearRecurrente(ProgramacionRecurrenteRequest request) {
@@ -96,12 +103,23 @@ public class ProgramacionViajeService {
                     + MAX_SALIDAS_RECURRENTES + ". Reduce el periodo o aumenta cadaHoras");
         }
         Ruta ruta = buscarRutaConVehiculo(request.idRuta());
+        int minutosMinimos = ruta.getDuracionEstimada() + HORAS_DESCANSO * 60;
+        if (request.cadaHoras() * 60 < minutosMinimos) {
+            throw new SolicitudInvalidaException("Esta ruta dura " + ruta.getDuracionEstimada()
+                    + " minutos y el vehículo necesita " + HORAS_DESCANSO + " horas de descanso: la frecuencia "
+                    + "mínima es cada " + (int) Math.ceil(minutosMinimos / 60.0) + " horas");
+        }
 
         List<ProgramacionViaje> nuevas = new ArrayList<>();
         int omitidas = 0;
+        int conflictos = 0;
         for (LocalDateTime salida = inicio; !salida.isAfter(fin); salida = salida.plusHours(request.cadaHoras())) {
             if (programacionViajeRepository.existsByRutaIdRutaAndFechaHoraSalida(ruta.getIdRuta(), salida)) {
                 omitidas++;
+                continue;
+            }
+            if (buscarCruce(ruta.getVehiculo(), ruta.getDuracionEstimada(), salida, null) != null) {
+                conflictos++;
                 continue;
             }
             ProgramacionViaje programacion = new ProgramacionViaje();
@@ -112,7 +130,7 @@ public class ProgramacionViajeService {
         List<ProgramacionResponse> salidas = programacionViajeRepository.saveAll(nuevas).stream()
                 .map(ProgramacionResponse::from)
                 .toList();
-        return new ProgramacionRecurrenteResponse(salidas.size(), omitidas, salidas);
+        return new ProgramacionRecurrenteResponse(salidas.size(), omitidas, conflictos, salidas);
     }
 
     /** Cambia la ruta o la hora de una salida que todavía no tiene pasajeros. */
@@ -123,11 +141,12 @@ public class ProgramacionViajeService {
         LocalDateTime salida = request.fechaHoraSalida().truncatedTo(ChronoUnit.MINUTES);
         if (programacionViajeRepository.existsByRutaIdRutaAndFechaHoraSalidaAndIdProgramacionViajeNot(
                 ruta.getIdRuta(), salida, id)) {
-            throw new ConflictoException("La ruta " + ruta.getIdRuta() + " ya tiene una salida el " + salida);
+            throw new ConflictoException("La ruta " + ruta.getIdRuta() + " ya tiene una salida el " + salida.format(FORMATO));
         }
         if (programacionViajeRepository.contarAsientosOcupados(id) > 0) {
             throw new ConflictoException("La salida ya tiene pasajeros reservados; no se puede modificar");
         }
+        validarVehiculoLibre(ruta.getVehiculo(), ruta.getDuracionEstimada(), salida, id);
         programacion.setRuta(ruta);
         programacion.setFechaHoraSalida(salida);
         return ProgramacionResponse.from(programacion);
@@ -138,6 +157,31 @@ public class ProgramacionViajeService {
     public void eliminar(Long id) {
         programacionViajeRepository.delete(buscarEntidad(id));
         programacionViajeRepository.flush();
+    }
+
+    /**
+     * Capa de seguridad contra cruces de horario: el vehículo no puede tener otro viaje que empiece antes
+     * de 12 horas después de que este llegue, ni que llegue menos de 12 horas antes de que este salga.
+     * idExcluir = la salida que se está modificando (null al crear).
+     */
+    public void validarVehiculoLibre(Vehiculo vehiculo, int duracionMinutos, LocalDateTime salida, Long idExcluir) {
+        ProgramacionViaje cruce = buscarCruce(vehiculo, duracionMinutos, salida, idExcluir);
+        if (cruce != null) {
+            Ruta otra = cruce.getRuta();
+            throw new ConflictoException("El vehículo " + vehiculo.getCodigoIdentificacion() + " ya tiene la salida "
+                    + cruce.getIdProgramacionViaje() + " (" + otra.getCiudadOrigen().getNombreCiudad() + " → "
+                    + otra.getCiudadDestino().getNombreCiudad() + ", " + cruce.getFechaHoraSalida().format(FORMATO)
+                    + " a " + cruce.calcularLlegada().format(FORMATO) + "). Entre un viaje y otro del mismo vehículo "
+                    + "deben pasar al menos " + HORAS_DESCANSO + " horas");
+        }
+    }
+
+    private ProgramacionViaje buscarCruce(Vehiculo vehiculo, int duracionMinutos, LocalDateTime salida,
+                                          Long idExcluir) {
+        LocalDateTime limiteSuperior = salida.plusMinutes(duracionMinutos).plusHours(HORAS_DESCANSO);
+        List<ProgramacionViaje> cruces = programacionViajeRepository.buscarCruceVehiculo(vehiculo.getIdVehiculo(),
+                idExcluir == null ? -1L : idExcluir, salida, limiteSuperior, HORAS_DESCANSO * 60);
+        return cruces.isEmpty() ? null : cruces.getFirst();
     }
 
     private Ruta buscarRutaConVehiculo(Long idRuta) {

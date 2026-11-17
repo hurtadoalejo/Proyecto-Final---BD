@@ -30,16 +30,19 @@ public class RutaService {
     private final VehiculoRepository vehiculoRepository;
     private final ProgramacionViajeRepository programacionViajeRepository;
     private final CatalogoService catalogoService;
+    private final ProgramacionViajeService programacionViajeService;
 
     public RutaService(RutaRepository rutaRepository, CiudadRepository ciudadRepository,
                        VehiculoRepository vehiculoRepository,
                        ProgramacionViajeRepository programacionViajeRepository,
-                       CatalogoService catalogoService) {
+                       CatalogoService catalogoService,
+                       ProgramacionViajeService programacionViajeService) {
         this.rutaRepository = rutaRepository;
         this.ciudadRepository = ciudadRepository;
         this.vehiculoRepository = vehiculoRepository;
         this.programacionViajeRepository = programacionViajeRepository;
         this.catalogoService = catalogoService;
+        this.programacionViajeService = programacionViajeService;
     }
 
     /** Rutas cuyo origen o destino coincide con el texto (nombre o código); todas si viene vacío. */
@@ -66,6 +69,16 @@ public class RutaService {
     public RutaResponse actualizar(Long id, RutaRequest request) {
         Ruta ruta = buscarEntidad(id);
         Datos datos = validar(request);
+        boolean cambiaVehiculo = ruta.getVehiculo() == null
+                || !ruta.getVehiculo().getIdVehiculo().equals(datos.vehiculo().getIdVehiculo());
+        boolean cambiaDuracion = !ruta.getDuracionEstimada().equals(request.duracionEstimada());
+        if (cambiaVehiculo || cambiaDuracion) {
+            // Las salidas que ya tiene la ruta no pueden chocar con otros viajes del vehículo (12 h de descanso).
+            for (ProgramacionViaje salida : programacionViajeRepository.findByRutaIdRuta(id)) {
+                programacionViajeService.validarVehiculoLibre(datos.vehiculo(), request.duracionEstimada(),
+                        salida.getFechaHoraSalida(), salida.getIdProgramacionViaje());
+            }
+        }
         aplicar(ruta, request, datos);
         return RutaResponse.from(ruta);
     }

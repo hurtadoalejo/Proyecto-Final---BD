@@ -54,6 +54,30 @@ public interface ProgramacionViajeRepository extends JpaRepository<ProgramacionV
     boolean existsByRutaIdRutaAndFechaHoraSalidaAndIdProgramacionViajeNot(
             Long idRuta, LocalDateTime fechaHoraSalida, Long idProgramacionViaje);
 
+    /**
+     * Salidas del mismo vehículo que chocan con un viaje nuevo: entre la llegada de un viaje y la
+     * salida del siguiente deben pasar al menos minutosDescanso. limiteSuperior = llegada nueva + descanso.
+     * Devuelve como máximo una (la primera que choca).
+     */
+    @Query(nativeQuery = true, value = """
+           SELECT pv.* FROM ProgramacionViaje pv
+           JOIN Ruta r          ON r.idRuta = pv.idRuta
+           JOIN RutaVehiculo rv ON rv.idRuta = r.idRuta
+           WHERE rv.idVehiculo = :idVehiculo
+             AND pv.idProgramacionViaje <> :idExcluir
+             AND pv.fechaHoraSalida < :limiteSuperior
+             AND DATE_ADD(pv.fechaHoraSalida, INTERVAL (r.duracionEstimada + :minutosDescanso) MINUTE) > :salida
+           ORDER BY pv.fechaHoraSalida
+           LIMIT 1
+           """)
+    List<ProgramacionViaje> buscarCruceVehiculo(@Param("idVehiculo") Long idVehiculo,
+                                                @Param("idExcluir") Long idExcluir,
+                                                @Param("salida") LocalDateTime salida,
+                                                @Param("limiteSuperior") LocalDateTime limiteSuperior,
+                                                @Param("minutosDescanso") int minutosDescanso);
+
+    List<ProgramacionViaje> findByRutaIdRuta(Long idRuta);
+
     /** Pasajeros ya reservados en una salida, sin contar reservas canceladas (asientos ocupados). */
     @Query("""
            select count(d) from DetalleReserva d
@@ -64,14 +88,13 @@ public interface ProgramacionViajeRepository extends JpaRepository<ProgramacionV
            """)
     long contarAsientosOcupados(@Param("idProgramacion") Long idProgramacion);
 
-    /** Cuántas reservas activas tienen ese asiento en esa salida (0 = libre). */
+    /** Asientos ocupados en una salida (en mayúsculas), sin contar reservas canceladas. */
     @Query("""
-           select count(d) from DetalleReserva d
+           select upper(d.numeroAsiento) from DetalleReserva d
              join d.reserva r
              join r.viajes rv
            where rv.programacionViaje.idProgramacionViaje = :idProgramacion
-             and upper(d.numeroAsiento) = upper(:asiento)
              and r.estadoReserva.nombreEstadoReserva <> 'CANCELADA'
            """)
-    long contarAsiento(@Param("idProgramacion") Long idProgramacion, @Param("asiento") String asiento);
+    List<String> listarAsientosOcupados(@Param("idProgramacion") Long idProgramacion);
 }

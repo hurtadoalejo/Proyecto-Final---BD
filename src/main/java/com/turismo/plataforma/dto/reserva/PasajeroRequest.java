@@ -28,8 +28,8 @@ public record PasajeroRequest(
         @Size(max = 20, message = "Máximo 20 caracteres")
         String segundoApellido,
 
-        @NotBlank(message = "El número de asiento es obligatorio")
-        @Pattern(regexp = "^[A-Za-z0-9-]{1,10}$", message = "Asiento inválido (ej.: 12A)")
+        /** Opcional: si no se envía, el backend asigna el primer asiento libre (1, 2, 3...). */
+        @Pattern(regexp = "^[A-Za-z0-9-]{0,10}$", message = "Asiento inválido (ej.: 12A)")
         String numeroAsiento,
 
         @NotNull(message = "El plan es obligatorio")
