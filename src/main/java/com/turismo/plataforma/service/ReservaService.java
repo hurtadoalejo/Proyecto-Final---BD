@@ -52,6 +52,16 @@ public class ReservaService {
                 .toList();
     }
 
+    /** Historial de compras de un cliente, con viajes, pasajeros, valores y pago (de la más reciente a la más antigua). */
+    public List<ReservaResponse> comprasDeCliente(Long idCliente) {
+        if (!clienteRepository.existsById(idCliente)) {
+            throw new RecursoNoEncontradoException("No existe el cliente con id " + idCliente);
+        }
+        return reservaRepository.listar(idCliente).stream()
+                .map(ReservaResponse::from)
+                .toList();
+    }
+
     public ReservaResponse obtener(Long id) {
         return ReservaResponse.from(buscarEntidad(id));
     }

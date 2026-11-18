@@ -1,5 +1,6 @@
 package com.turismo.plataforma.service;
 
+import com.turismo.plataforma.dto.oferta.CuponResponse;
 import com.turismo.plataforma.dto.oferta.OfertaRequest;
 import com.turismo.plataforma.dto.oferta.OfertaResponse;
 import com.turismo.plataforma.exception.RecursoNoEncontradoException;
@@ -17,7 +18,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /** Ofertas: porcentaje de descuento que se aplica a una reserva mientras esté vigente. */
 @Service
@@ -46,6 +50,37 @@ public class OfertaService {
                 ? ofertaRepository.findByFechaInicioLessThanEqualAndFechaFinGreaterThanEqualOrderByFechaFin(hoy, hoy)
                 : ofertaRepository.findAllByOrderByFechaInicioDesc();
         return ofertas.stream().map(OfertaResponse::from).toList();
+    }
+
+    /**
+     * Cupones de un cliente: ofertas vigentes hoy que le llegaron por notificación
+     * (cada oferta una sola vez, con la fecha de la primera notificación).
+     */
+    public List<CuponResponse> cuponesDeCliente(Long idCliente) {
+        if (!clienteRepository.existsById(idCliente)) {
+            throw new RecursoNoEncontradoException("No existe el cliente con id " + idCliente);
+        }
+        LocalDate hoy = LocalDate.now();
+        Map<Long, CuponResponse> cupones = new LinkedHashMap<>();
+        for (Notificacion n : notificacionRepository.listarPorCliente(idCliente)) {
+            Oferta oferta = n.getOferta();
+            if (oferta == null || !oferta.estaVigente(hoy)) {
+                continue;
+            }
+            CuponResponse cupon = new CuponResponse(oferta.getIdOferta(), oferta.getTitulo(), oferta.getDescripcion(),
+                    oferta.getPorcentajeDescuento(), oferta.getFechaInicio(), oferta.getFechaFin(), n.getFechaEnvio());
+            cupones.merge(oferta.getIdOferta(), cupon, OfertaService::anterior);
+        }
+        return cupones.values().stream()
+                .sorted(Comparator.comparing(CuponResponse::fechaFin))
+                .toList();
+    }
+
+    /** Se queda con la notificación más antigua (la primera vez que se le avisó). */
+    private static CuponResponse anterior(CuponResponse a, CuponResponse b) {
+        if (a.fechaNotificacion() == null) return b;
+        if (b.fechaNotificacion() == null) return a;
+        return a.fechaNotificacion().isBefore(b.fechaNotificacion()) ? a : b;
     }
 
     public OfertaResponse obtener(Long id) {
