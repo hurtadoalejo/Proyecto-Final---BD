@@ -20,4 +20,11 @@ public interface ReservaRepository extends JpaRepository<Reserva, Long> {
            order by r.fechaReserva desc
            """)
     List<Reserva> listar(@Param("idCliente") Long idCliente);
+
+    /** Reservas de un cliente (cualquier estado). */
+    long countByClienteIdUsuario(Long idCliente);
+
+    /** Cantidad de reservas por cliente: [idCliente, reservas]. */
+    @Query("select r.cliente.idUsuario, count(r) from Reserva r group by r.cliente.idUsuario")
+    List<Object[]> contarPorCliente();
 }

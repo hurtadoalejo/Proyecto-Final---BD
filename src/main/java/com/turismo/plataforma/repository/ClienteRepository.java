@@ -22,4 +22,20 @@ public interface ClienteRepository extends JpaRepository<Cliente, Long> {
            order by c.nombre.primerApellido, c.nombre.primerNombre
            """)
     List<Cliente> buscar(@Param("texto") String texto);
+
+    /**
+     * Dinero gastado por cada cliente que tiene pagos aprobados:
+     * [idCliente, comprasPagadas, totalGastado].
+     */
+    @Query(value = """
+           SELECT r.Cliente_idUsuario          AS idCliente,
+                  COUNT(DISTINCT r.idReserva)  AS comprasPagadas,
+                  SUM(t.montoPagado)           AS totalGastado
+           FROM Reserva r
+           JOIN Transaccion t        ON t.idReserva = r.idReserva
+           JOIN EstadoTransaccion et ON et.idEstadoTransaccion = t.idEstadoTransaccion
+           WHERE et.nombreEstadoTransaccion = 'APROBADA'
+           GROUP BY r.Cliente_idUsuario
+           """, nativeQuery = true)
+    List<Object[]> gastoPorCliente();
 }

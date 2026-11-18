@@ -254,6 +254,7 @@ Errores: **400** datos o ids inválidos, asiento repetido dentro de la reserva, 
 | `GET /api/reservas/{id}/pago` | Pago y factura |
 | `GET /api/clientes/{id}/compras` | Historial de compras del cliente: lista con el mismo formato de `GET /api/reservas/{id}` (viajes, pasajeros con asiento, subtotal, descuento, total y `pago` con la factura), de la más reciente a la más antigua |
 | `GET /api/clientes/{id}/cupones` | Cupones disponibles: ofertas vigentes que le llegaron por notificación `[{ idOferta, titulo, descripcion, porcentajeDescuento, fechaInicio, fechaFin, fechaNotificacion }]` |
+| `GET /api/clientes/resumen?q=&gastoMin=&gastoMax=` | Gestión de clientes: `[{ datosPersonales: {...igual a GET /api/clientes/{id}}, totalGastado, comprasPagadas, reservas }]`, del que más gastó al que menos. `totalGastado` suma solo pagos APROBADOS; los filtros son opcionales e incluyen el límite |
 | `GET /api/clientes/{id}/millas` | `{ idCliente, kilometrosRecorridos, millasAcumuladas }` (reservas confirmadas) |
 
 ## 6. Administración (CRUD)
@@ -262,7 +263,7 @@ Todos siguen el mismo patrón: `GET /api/x` (lista, con filtro opcional), `GET /
 
 | Recurso | Cuerpo de POST/PUT | Filtro del GET |
 |---|---|---|
-| `/api/clientes` (sin POST: se usa el registro) | igual al registro, sin `contrasena` | `?q=` identificación o apellido |
+| `/api/clientes` | POST: igual al registro (con `contrasena`). PUT: igual, sin `contrasena`. `DELETE` responde **409** si el cliente tiene reservas: *"No se puede eliminar al cliente porque tiene 2 reservas registradas..."* | `?q=` identificación o apellido |
 | `/api/empleados` | registro + `salario`, `fechaContratacion` ("2026-01-15"), `idCargo`, `idSede`, `rol` (EMPLEADO o ADMIN). En PUT sin `contrasena` | `?idSede=` |
 | `/api/sedes` | `{ nombreSede, direccion, pais, departamento, ciudad }` (por nombre, como en `/api/catalogos/ubicaciones/no-europa`). `DELETE` responde **409** con el motivo si la sede tiene empleados: *"No se puede eliminar la sede Sede Cali: tiene 1 empleado trabajando en ella. Reasígnalos a otra sede primero"* | `?q=` |
 | `/api/planes` | `{ nombrePlan, descripcionPlan, pesoMaxEquipaje, incluyeCheckIn, precioExtra }` | `?q=` |
