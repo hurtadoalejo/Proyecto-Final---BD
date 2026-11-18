@@ -6,7 +6,8 @@
 --  (~80 % de los pares entre las 32 ciudades de EUROPEAN_CITIES, ida y vuelta)
 --  y su programación del 01-dic-2026 al 31-ene-2027, más 40 reservas de ejemplo
 --  con pagos y facturas (para los reportes) y las notificaciones de las ofertas.
---  La administradora (admin@viajacol.com) la crea la aplicación al arrancar.
+--  Incluye la administradora (admin@viajacol.com / AdminViajaCol2026). Si la base no tiene
+--  ningún ADMIN, la aplicación también la crea al arrancar.
 -- =====================================================================
 USE turismo_db;
 
@@ -221,8 +222,9 @@ JOIN Departamento d ON d.nombreDepartamento = x.depto
 JOIN Pais p ON p.idPais = d.idPais AND p.nombrePais = 'Colombia'
 JOIN Ciudad c ON c.nombreCiudad = x.ciudad AND c.idDepartamento = d.idDepartamento;
 
--- ---------------- Usuarios: 10 asesores (uno por sede) y 4 clientes ----------------
--- Contraseñas en texto plano: asesores trabajador1..trabajador10, clientes cliente01..cliente04.
+-- ---------------- Usuarios: 1 administradora, 10 asesores (uno por sede) y 4 clientes ----------------
+-- Contraseñas en texto plano: admin AdminViajaCol2026, asesores trabajador1..trabajador10,
+-- clientes cliente01..cliente04.
 CREATE TEMPORARY TABLE tmp_usuario (
     rol VARCHAR(10), pn VARCHAR(20), sn VARCHAR(20), pa VARCHAR(20), sa VARCHAR(20),
     ident VARCHAR(20), tipoId VARCHAR(40), tel VARCHAR(20), nac DATE,
@@ -231,6 +233,7 @@ CREATE TEMPORARY TABLE tmp_usuario (
     sede VARCHAR(40), salario DECIMAL(12,2), contratacion DATE
 );
 INSERT INTO tmp_usuario VALUES
+('ADMIN','Laura',NULL,'Restrepo',NULL,'1020456789','CC','+57 3104567890','1988-04-12','admin@viajacol.com','AdminViajaCol2026','Carrera 43A # 1-50, El Poblado','Medellín','Antioquia','Colombia','Sede Principal Medellín',6500000.00,'2024-01-15'),
 ('EMPLEADO','Carlos','Andrés','Restrepo','Gómez','1017234501','CC','+57 3001110001','1990-03-12','asesor.medellin@viajacol.com','trabajador1','Calle 10 # 35-20','Medellín','Antioquia','Colombia','Sede Principal Medellín',2800000,'2024-02-01'),
 ('EMPLEADO','Laura','Sofía','Pérez','Mejía','1045678902','CC','+57 3001110002','1993-07-25','asesor.barranquilla@viajacol.com','trabajador2','Carrera 46 # 80-15','Barranquilla','Atlántico','Colombia','Sede Barranquilla',2600000,'2024-03-15'),
 ('EMPLEADO','Juan','David','Ortiz','Salazar','1020345603','CC','+57 3001110003','1989-11-08','asesor.bogota@viajacol.com','trabajador3','Calle 85 # 15-30','Bogotá','Bogotá D.C.','Colombia','Sede Bogotá',2800000,'2023-09-01'),
@@ -261,9 +264,9 @@ INSERT INTO Empleado (idUsuario, salario, fechaContratacion, idCargo, idSede)
 SELECT u.idUsuario, t.salario, t.contratacion, cg.idCargo, s.idSede
 FROM tmp_usuario t
 JOIN Usuario u ON u.correo = t.correo
-JOIN Cargo cg  ON cg.nombreCargo = 'Asesor de ventas'
+JOIN Cargo cg  ON cg.nombreCargo = IF(t.rol = 'ADMIN', 'Administrador del sistema', 'Asesor de ventas')
 JOIN Sede s    ON s.nombreSede = t.sede
-WHERE t.rol = 'EMPLEADO';
+WHERE t.rol IN ('ADMIN', 'EMPLEADO');
 
 INSERT INTO Cliente (idUsuario)
 SELECT u.idUsuario
@@ -2274,7 +2277,7 @@ WHERE n.idOferta IS NOT NULL;
 -- Resumen esperado:
 --   SELECT COUNT(*) FROM Ciudad;             -- 190
 --   SELECT COUNT(*) FROM Sede;               -- 10
---   SELECT COUNT(*) FROM Empleado;           -- 10 (+ la admin cuando arranque la app)
+--   SELECT COUNT(*) FROM Empleado;           -- 11 (la admin y 10 asesores)
 --   SELECT COUNT(*) FROM Cliente;            -- 4
 --   SELECT COUNT(*) FROM Ruta;               -- 798
 --   SELECT COUNT(*) FROM ProgramacionViaje;  -- 49476 (798 salidas/día x 62 días)

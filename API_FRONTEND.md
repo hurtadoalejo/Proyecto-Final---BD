@@ -89,7 +89,7 @@ Se envía el `formData` de `Login.tsx`:
 
 `rol`: CLIENTE, EMPLEADO o ADMIN. `tipoUsuario`: CLIENTE o EMPLEADO. Si el correo o la contraseña no coinciden: **401**.
 
-Administrador creado al arrancar: `admin@viajacol.com` / `AdminViajaCol2026` (rol ADMIN).
+Administradora: `admin@viajacol.com` / `AdminViajaCol2026` (rol ADMIN). Viene en `02_datos.sql` y, si la base no tiene ningún ADMIN, la aplicación también la crea al arrancar.
 
 ## 3. Búsqueda de viajes – `POST /api/rutas/buscar`
 
@@ -252,6 +252,8 @@ Errores: **400** datos o ids inválidos, asiento repetido dentro de la reserva, 
 | `PUT /api/reservas/{id}/cancelar` | Solo reservas PENDIENTES → CANCELADA (libera los asientos) |
 | `DELETE /api/reservas/{id}` | Solo si no tiene pago |
 | `GET /api/reservas/{id}/pago` | Pago y factura |
+| `GET /api/clientes/{id}/compras` | Historial de compras del cliente: lista con el mismo formato de `GET /api/reservas/{id}` (viajes, pasajeros con asiento, subtotal, descuento, total y `pago` con la factura), de la más reciente a la más antigua |
+| `GET /api/clientes/{id}/cupones` | Cupones disponibles: ofertas vigentes que le llegaron por notificación `[{ idOferta, titulo, descripcion, porcentajeDescuento, fechaInicio, fechaFin, fechaNotificacion }]` |
 | `GET /api/clientes/{id}/millas` | `{ idCliente, kilometrosRecorridos, millasAcumuladas }` (reservas confirmadas) |
 
 ## 6. Administración (CRUD)

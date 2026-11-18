@@ -8,7 +8,7 @@ Spring Boot 4.1 · Java 21 · MySQL 8 · Proyecto final Bases de Datos I.
    - `src/main/resources/db/01_esquema.sql` → crea `turismo_db` con las 30 tablas del modelo.
    - `src/main/resources/db/02_datos.sql` → catálogos, ubicaciones (8 países del registro + 32 ciudades europeas), 10 sedes en Colombia (principal en Medellín), 10 asesores, 4 clientes, planes, ofertas, vehículos, 798 rutas europeas (avión, tren y bus) y sus salidas diarias del 01-dic-2026 al 31-ene-2027.
 2. **Conexión**: usa `localhost:3306`, usuario `root`. La contraseña de MySQL va en la variable de entorno `DB_PASSWORD` (IntelliJ → Run → Edit Configurations → Environment variables: `DB_PASSWORD=tu_clave`). Si tu MySQL usa otro puerto, agrega `DB_PORT` (ej.: `DB_PASSWORD=tu_clave;DB_PORT=3307`).
-3. Ejecuta `PlataformaApplication`. Al arrancar se crea el administrador `admin@viajacol.com` / `AdminViajaCol2026` (se puede cambiar con la variable `ADMIN_PASSWORD`).
+3. Ejecuta `PlataformaApplication`. La administradora `admin@viajacol.com` / `AdminViajaCol2026` ya viene en `02_datos.sql` (si la base no tiene ningún ADMIN, la aplicación la crea al arrancar).
 4. API en `http://localhost:8080` · Swagger en `http://localhost:8080/swagger-ui.html`.
 
 La guía de endpoints con los JSON para el frontend está en **[API_FRONTEND.md](API_FRONTEND.md)**.
