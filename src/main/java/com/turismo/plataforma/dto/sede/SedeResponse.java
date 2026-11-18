@@ -1,11 +1,17 @@
 package com.turismo.plataforma.dto.sede;
 
 import com.turismo.plataforma.model.Sede;
+import com.turismo.plataforma.model.ubicacion.Ciudad;
+import com.turismo.plataforma.model.ubicacion.Departamento;
 
-public record SedeResponse(Long idSede, String nombreSede, String direccion, Long idCiudad, String nombreCiudad) {
+public record SedeResponse(Long idSede, String nombreSede, String direccion, String pais, String departamento,
+                           String ciudad, Long idCiudad) {
 
     public static SedeResponse from(Sede sede) {
+        Ciudad ciudad = sede.getCiudad();
+        Departamento departamento = ciudad.getDepartamento();
         return new SedeResponse(sede.getIdSede(), sede.getNombreSede(), sede.getDireccion(),
-                sede.getCiudad().getIdCiudad(), sede.getCiudad().getNombreCiudad());
+                departamento.getPais().getNombrePais(), departamento.getNombreDepartamento(),
+                ciudad.getNombreCiudad(), ciudad.getIdCiudad());
     }
 }

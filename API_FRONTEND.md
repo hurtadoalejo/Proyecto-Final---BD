@@ -93,20 +93,22 @@ Administrador creado al arrancar: `admin@viajacol.com` / `AdminViajaCol2026` (ro
 
 ## 3. Búsqueda de viajes – `POST /api/rutas/buscar`
 
+`origen` y `destino` van **por nombre de ciudad**, el `name` de `EUROPEAN_CITIES` (el `code` ya no se usa):
+
 ```json
 {
-  "tipoTransporte": "AVION",
+  "tipoTransporte": "avion",
   "pasajeros": 1,
   "tramos": [
-    { "origen": "BOG", "destino": "MDE", "fecha": "2026-11-20" },
-    { "origen": "MDE", "destino": "BOG", "fecha": "2026-11-25" }
+    { "origen": "Madrid", "destino": "París", "fecha": "2026-12-10" },
+    { "origen": "París", "destino": "Madrid", "fecha": "2026-12-15" }
   ]
 }
 ```
 
-`tipoTransporte`: AVION, BUS o TREN (también en minúscula: `avion`, `tren`, `bus`, como el `TransportMode` del front) · `pasajeros`: 1 a 9 · `tramos`: 1 a 6, con fechas en orden y no pasadas · `origen`/`destino`: códigos de 3 letras (ver `/api/catalogos/ciudades-destino`).
+`tipoTransporte`: AVION, BUS o TREN (también en minúscula, como el `TransportMode` del front) · `pasajeros`: 1 a 9 · `tramos`: 1 a 6, con fechas en orden y no pasadas · mayúsculas y tildes no importan (`"paris"` = `"París"`).
 
-**200 OK** – un bloque por tramo, en el mismo orden. Si un tramo no tiene salidas con cupo ese día, `viajes` viene vacío.
+**200 OK** – un bloque por tramo, en el mismo orden. Si un tramo no tiene salidas con cupo ese día (o esas ciudades no tienen ruta en ese transporte), `viajes` viene vacío.
 
 ```json
 {
@@ -114,49 +116,62 @@ Administrador creado al arrancar: `admin@viajacol.com` / `AdminViajaCol2026` (ro
   "pasajeros": 1,
   "tramos": [
     {
-      "origen": "BOG", "ciudadOrigen": "Bogotá",
-      "destino": "MDE", "ciudadDestino": "Medellín",
-      "fecha": "2026-11-20",
+      "origen": "Madrid", "paisOrigen": "España",
+      "destino": "París", "paisDestino": "Francia",
+      "fecha": "2026-12-10",
       "viajes": [
         {
           "idProgramacionViaje": 1234,
           "idRuta": 1,
-          "fechaHoraSalida": "2026-11-20T06:30:00",
-          "fechaHoraLlegada": "2026-11-20T07:25:00",
-          "duracionEstimada": 55,
-          "direccionOrigen": "Aeropuerto El Dorado",
-          "direccionDestino": "Aeropuerto José María Córdova",
+          "fechaHoraSalida": "2026-12-10T06:30:00",
+          "fechaHoraLlegada": "2026-12-10T08:30:00",
+          "duracionEstimada": 120,
+          "direccionOrigen": "Aeropuerto Adolfo Suárez Barajas",
+          "direccionDestino": "Aeropuerto Charles de Gaulle",
           "tipoTransporte": "AVION",
-          "codigoVehiculo": "HK-5120",
-          "distancia": 215.00,
-          "precioBase": 280000.00,
-          "precioTotal": 280000.00,
+          "codigoVehiculo": "EC-MXV",
+          "distancia": 1050.00,
+          "precioBase": 520000.00,
+          "precioTotal": 520000.00,
           "asientosDisponibles": 180
         }
       ]
     },
-    { "origen": "MDE", "ciudadOrigen": "Medellín", "destino": "BOG", "ciudadDestino": "Bogotá", "fecha": "2026-11-25", "viajes": [ ... ] }
+    { "origen": "París", "paisOrigen": "Francia", "destino": "Madrid", "paisDestino": "España", "fecha": "2026-12-15", "viajes": [ ... ] }
   ]
 }
 ```
 
 `duracionEstimada` en minutos · `distancia` en km · `precioTotal` = `precioBase` × pasajeros (sin plan ni oferta). El `idProgramacionViaje` elegido es el que se manda al crear la reserva.
 
-Hay salidas todos los días desde el 13-nov-2026 hasta el 31-ene-2027: avión 06:30 y 18:15, tren 07:00, 13:30 y 19:45, bus 08:00 y 22:30.
+**Rutas:** 798 (ida y vuelta) que conectan ~80 % de los pares entre las 32 ciudades de `EUROPEAN_CITIES`; cada ciudad tiene entre 20 y 28 destinos directos. Hay **una salida diaria por ruta del 01-dic-2026 al 31-ene-2027**: avión ida 07:00 / vuelta 14:00 · tren ida 08:00 / vuelta 16:00 · bus ida 07:00 / vuelta 19:00 (cada ruta tiene su propio vehículo, para cumplir la regla de 12 horas de descanso). Una búsqueda con fecha de noviembre devuelve `viajes` vacío.
 
 ## 4. Catálogos (listas desplegables) – `GET`
 
+**Ubicaciones completas** – forma `{ país: { departamento: [ciudades] } }`, igual a `UBICACIONES` de `Register.tsx` (un país sin ciudades sale como `{}`):
+
 | Endpoint | Devuelve |
 |---|---|
+| `/api/catalogos/ubicaciones/no-europa` | países que **no** son de Europa (clientes y sedes): `{ "Colombia": { "Antioquia": ["Medellín", "Envigado"], ... }, "Estados Unidos": { ... }, ... }` |
+| `/api/catalogos/ubicaciones/europa` | países de Europa (España y los de las rutas): `{ "España": { "Andalucía": ["Sevilla", "Málaga"], ... }, "Francia": { "Isla de Francia": ["París"], ... }, ... }` |
+| `/api/catalogos/ubicaciones` | todos los países |
+| `/api/catalogos/indicativos/no-europa` | nombre e indicativo de los países que no son de Europa: `[{ "idPais": 1, "nombrePais": "Colombia", "indicativo": "+57" }, ...]` |
+
+**Consultas individuales:**
+
+| Endpoint | Devuelve |
+|---|---|
+| `/api/catalogos/continentes` | `[{ "id": 1, "nombre": "América" }, { "id": 2, "nombre": "Europa" }, ...]` |
+| `/api/catalogos/continentes/{idContinente}/paises` | `[{ "id": 1, "nombre": "Colombia" }, ...]` |
 | `/api/catalogos/paises` | `[{ "id": 1, "nombre": "Colombia" }, ...]` |
-| `/api/catalogos/indicativos` | `[{ "idPais": 1, "nombrePais": "Colombia", "indicativo": "+57" }, ...]` (opcional: el front ya los tiene) |
+| `/api/catalogos/indicativos` | indicativos de todos los países, mismo formato que `/indicativos/no-europa` |
 | `/api/catalogos/paises/{idPais}/departamentos` | `[{ "id": 25, "nombre": "Quindío" }, ...]` |
 | `/api/catalogos/departamentos/{idDepartamento}/ciudades` | `[{ "id": 3, "nombre": "Armenia" }, ...]` |
-| `/api/catalogos/ciudades-destino` | ciudades con código para la búsqueda: `[{ "idCiudad", "nombreCiudad", "codigoCiudad": "MAD", "idDepartamento", "nombreDepartamento", "idPais", "nombrePais" }]` |
+| `/api/catalogos/ciudades-destino` | ciudades con rutas (las 32 de `EUROPEAN_CITIES`): `[{ "idCiudad", "nombreCiudad", "idDepartamento", "nombreDepartamento", "idPais", "nombrePais" }]` |
 | `/api/catalogos/tipos-identificacion` | CC, CE, TI, PA, PEP |
 | `/api/catalogos/tipos-transporte` | AVION, BUS, TREN |
 | `/api/catalogos/tipos-trayecto` | IDA, VUELTA |
-| `/api/catalogos/metodos-pago` | PSE, TARJETA_CREDITO, TARJETA_DEBITO |
+| `/api/catalogos/metodos-pago` | PSE, TARJETA_CREDITO, TARJETA_DEBITO, EFECTIVO (solo para ventas hechas por un empleado) |
 | `/api/catalogos/roles` · `/cargos` · `/estados-reserva` · `/estados-transaccion` · `/estados-notificacion` | `{ id, nombre }` |
 
 Los ids de ejemplo de este documento pueden cambiar; tómalos siempre de estas listas.
@@ -179,14 +194,14 @@ Los ids de ejemplo de este documento pueden cambiar; tómalos siempre de estas l
       "tipoIdentificacion": "CC", "numeroIdentificacion": "1094912345",
       "primerNombre": "Juan", "segundoNombre": null,
       "primerApellido": "Pérez", "segundoApellido": null,
-      "numeroAsiento": "12A",
+      "numeroAsiento": null,
       "idPlan": 1
     }
   ]
 }
 ```
 
-Cada pasajero viaja en todos los viajes de la reserva con el mismo asiento y plan. `idEmpleado` (quien atiende) e `idOferta` son opcionales; la oferta debe estar vigente (`GET /api/ofertas?vigentes=true`). Planes: `GET /api/planes`.
+Cada pasajero viaja en todos los viajes de la reserva con el mismo asiento y plan. **`numeroAsiento` es opcional**: si va en `null`, el backend asigna el primer número libre (1, 2, 3… hasta la capacidad del vehículo) en todas las salidas de la reserva; si se envía (ej. `"12A"`), se respeta y responde 409 si ya está ocupado. Cuando la compra la hace un **empleado**, `idEmpleado` es el id del empleado y `idCliente` el del cliente al que le vende. `idEmpleado` (quien atiende) e `idOferta` son opcionales; la oferta debe estar vigente (`GET /api/ofertas?vigentes=true`). Planes: `GET /api/planes`.
 
 **201 Created** – la reserva queda **PENDIENTE**:
 
@@ -196,9 +211,9 @@ Cada pasajero viaja en todos los viajes de la reserva con el mismo asiento y pla
   "idCliente": 2, "nombreCliente": "Juan Pérez", "idEmpleado": null, "nombreEmpleado": null,
   "idOferta": 1, "tituloOferta": "Bienvenida",
   "viajes": [
-    { "idProgramacionViaje": 1234, "tipoTrayecto": "IDA", "codigoOrigen": "BOG", "ciudadOrigen": "Bogotá",
-      "codigoDestino": "MDE", "ciudadDestino": "Medellín", "fechaHoraSalida": "2026-11-20T06:30:00",
-      "fechaHoraLlegada": "2026-11-20T07:25:00", "precioBase": 280000.00 }
+    { "idProgramacionViaje": 1234, "tipoTrayecto": "IDA", "ciudadOrigen": "Madrid",
+      "ciudadDestino": "París", "fechaHoraSalida": "2026-12-10T06:30:00",
+      "fechaHoraLlegada": "2026-12-10T08:30:00", "precioBase": 520000.00 }
   ],
   "pasajeros": [
     { "idDetalle": 1, "tipoIdentificacion": "CC", "numeroIdentificacion": "1094912345", "nombreCompleto": "Juan Pérez",
@@ -218,6 +233,8 @@ Errores: **400** datos o ids inválidos, asiento repetido dentro de la reserva, 
 ```json
 { "metodoPago": "TARJETA_CREDITO" }
 ```
+
+`metodoPago`: TARJETA_CREDITO, TARJETA_DEBITO, PSE o **EFECTIVO**. El efectivo solo se acepta si la reserva tiene `idEmpleado` (venta en sede); si no, responde 400.
 
 **201 Created** – la reserva pasa a **CONFIRMADA** y se emite la factura:
 
@@ -245,12 +262,12 @@ Todos siguen el mismo patrón: `GET /api/x` (lista, con filtro opcional), `GET /
 |---|---|---|
 | `/api/clientes` (sin POST: se usa el registro) | igual al registro, sin `contrasena` | `?q=` identificación o apellido |
 | `/api/empleados` | registro + `salario`, `fechaContratacion` ("2026-01-15"), `idCargo`, `idSede`, `rol` (EMPLEADO o ADMIN). En PUT sin `contrasena` | `?idSede=` |
-| `/api/sedes` | `{ nombreSede, direccion, idCiudad }` | `?q=` |
+| `/api/sedes` | `{ nombreSede, direccion, pais, departamento, ciudad }` (por nombre, como en `/api/catalogos/ubicaciones/no-europa`). `DELETE` responde **409** con el motivo si la sede tiene empleados: *"No se puede eliminar la sede Sede Cali: tiene 1 empleado trabajando en ella. Reasígnalos a otra sede primero"* | `?q=` |
 | `/api/planes` | `{ nombrePlan, descripcionPlan, pesoMaxEquipaje, incluyeCheckIn, precioExtra }` | `?q=` |
-| `/api/ofertas` | `{ titulo, descripcion, porcentajeDescuento, fechaInicio, fechaFin }` | `?vigentes=true` |
+| `/api/ofertas` | `{ titulo, descripcion, porcentajeDescuento, fechaInicio, fechaFin }`. Al crearla se registra **automáticamente** una notificación ENVIADA a todos los clientes (simulada: solo queda en la BD; se ve en `GET /api/notificaciones`). Al eliminarla se borran también sus notificaciones | `?vigentes=true` |
 | `/api/vehiculos` | `{ codigoIdentificacion, tipoTransporte, capacidad }` | `?q=` |
-| `/api/rutas` | `{ idCiudadOrigen, direccionOrigen, idCiudadDestino, direccionDestino, distancia, duracionEstimada, precioBase, idVehiculo }` | `?q=` ciudad o código |
-| `/api/programaciones` | `{ idRuta, fechaHoraSalida: "2026-12-20T08:30:00" }` | `?idRuta=&desde=2026-12-01&hasta=2026-12-07` (máx. 31 días; por defecto los próximos 7) |
+| `/api/rutas` | `{ idCiudadOrigen, direccionOrigen, idCiudadDestino, direccionDestino, distancia, duracionEstimada, precioBase, idVehiculo }` | `?q=` nombre de ciudad |
+| `/api/programaciones` | `{ idRuta, fechaHoraSalida: "2026-12-20T08:30:00" }`. **Regla de 12 horas:** el vehículo de la ruta no puede tener otro viaje que empiece antes de 12 h después de que este llegue (ni que llegue menos de 12 h antes de que este salga); si choca responde 409 diciendo con qué salida. También se valida al cambiar el vehículo o la duración de una ruta que ya tiene salidas | `?idRuta=&desde=2026-12-01&hasta=2026-12-07` (máx. 31 días; por defecto los próximos 7) |
 | `/api/notificaciones` | `{ mensaje, estadoNotificacion, idOferta, idsClientes: [2, 5] }` | `?idCliente=` |
 
 Extras de programación:
@@ -259,10 +276,24 @@ Extras de programación:
   ```json
   { "idRuta": 1, "fechaHoraInicio": "2026-12-01T06:00:00", "fechaHoraFin": "2026-12-31T23:59:00", "cadaHoras": 24 }
   ```
-  `cadaHoras`: 24 = diaria, 168 = semanal, 8 = tres al día. Respuesta: `{ "creadas": 31, "omitidas": 0, "salidas": [...] }` (las que ya existían se omiten).
-- `GET /api/programaciones/{id}/asientos` → `{ idProgramacionViaje, capacidad, asientosOcupados, asientosDisponibles }`.
+  `cadaHoras`: 24 = diaria, 168 = semanal. Debe dejar el viaje más 12 horas de descanso (una ruta de 2 h necesita `cadaHoras` ≥ 14; si no, 400). Respuesta: `{ "creadas": 31, "omitidas": 0, "conflictos": 0, "salidas": [...] }` (`omitidas` = ya existían; `conflictos` = chocaban con otro viaje del mismo vehículo).
+- `GET /api/programaciones/{id}/asientos` → `{ idProgramacionViaje, capacidad, asientosOcupados, asientosDisponibles, ocupados: ["1", "2", "12A"] }`.
 
-## 7. Formato de errores
+## 7. Reportes – `GET /api/reportes/...`
+
+Todos devuelven una lista JSON lista para tabla o gráfico. Ventas e ingresos cuentan solo pagos **APROBADOS**; los pasajeros no cuentan reservas **CANCELADAS**. La base trae 40 reservas de ejemplo (35 pagadas) para que los reportes tengan datos.
+
+| Endpoint | Fila de la respuesta |
+|---|---|
+| `/ventas-mensuales` (`?anio=2026` opcional) | `{ "periodo": "2026-11", "cantidadVentas": 8, "totalVendido": 6123000.00 }` |
+| `/ingresos-metodo-pago` | `{ "metodoPago": "PSE", "cantidadPagos": 10, "totalIngresos": 9000000.00, "porcentaje": 28.50 }` |
+| `/reservas-por-empleado` | `{ "idEmpleado": 5, "nombreEmpleado": "Carlos Restrepo Gómez", "cargo": "Asesor de ventas", "sede": "Sede Principal Medellín", "cantidadReservas": 7, "totalVendido": 5400000.00 }` |
+| `/rutas-mas-pasajeros` (`?limite=10`) | `{ "idRuta": 3, "origen": "Madrid", "destino": "París", "tipoTransporte": "AVION", "reservas": 4, "pasajeros": 9, "promedioCategoria": null }` |
+| `/clientes-sobre-promedio` | `{ "idCliente": 13, "nombreCliente": "Ana Gutiérrez Londoño", "correo": "...", "cantidadReservas": 12, "totalGastado": 15484600.00, "promedioClientes": 7894067.50 }` |
+| `/rutas-bajo-promedio` (`?tipo=AVION\|BUS\|TREN` opcional) | rutas con **menos** pasajeros que el promedio de su tipo (las menos eficientes); mismo formato que `/rutas-mas-pasajeros`, con `promedioCategoria` lleno |
+| `/rutas-sobre-promedio` (`?tipo=` opcional) | rutas más vendidas de cada tipo: **más** pasajeros que el promedio de su tipo; mismo formato |
+
+## 8. Formato de errores
 
 Todos los errores usan el mismo formato (`application/problem+json`):
 

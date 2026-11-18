@@ -4,10 +4,9 @@
 --  (Oracle SQL Developer Data Modeler, ProyectoFinal.dmd, versión del 13-nov-2026).
 --
 --  Nombres de tablas y columnas: EXACTOS a los del modelo.
---  Ajustes sobre el modelo (marcados con [C1]..[C6]):
+--  Ajustes sobre el modelo (marcados con [C1], [C2], [C4], [C5] y [C6]):
 --   [C1] Fechas con hora (salida, reserva, pago, envío, emisión): DATE -> DATETIME.
 --   [C2] Dinero y medidas: NUMERIC sin escala -> DECIMAL con decimales.
---   [C3] Ciudad.codigoCiudad (nuevo): código de 3 letras que usa el frontend (BOG, MAD...).
 --   [C4] UNIQUE en Usuario.correo y Usuario.identificacion.
 --   [C5] Notificacion.idOferta pasa a ser opcional (recordatorios sin oferta).
 --   [C6] nombreDepartamento y nombreCiudad: VARCHAR(25) -> VARCHAR(40), porque el registro
@@ -87,12 +86,21 @@ CREATE TABLE TipoTrayecto (
 -- ---------------------------------------------------------------------
 -- Ubicación: Pais -> Departamento -> Ciudad
 -- ---------------------------------------------------------------------
+CREATE TABLE Continente (
+    idContinente      BIGINT       NOT NULL AUTO_INCREMENT,
+    nombreContinente  VARCHAR(25)  NOT NULL,
+    CONSTRAINT Continente_PK PRIMARY KEY (idContinente),
+    CONSTRAINT Continente_nombre_UK UNIQUE (nombreContinente)
+);
+
 CREATE TABLE Pais (
-    idPais      BIGINT       NOT NULL AUTO_INCREMENT,
-    nombrePais  VARCHAR(25)  NOT NULL,
-    indicativo  INT,                     -- indicativo telefónico (57, 1, 34...)
+    idPais                   BIGINT       NOT NULL AUTO_INCREMENT,
+    indicativoPais           INT,                     -- indicativo telefónico (57, 1, 34...)
+    nombrePais               VARCHAR(25)  NOT NULL,
+    Continente_idContinente  BIGINT       NOT NULL,
     CONSTRAINT Pais_PK PRIMARY KEY (idPais),
-    CONSTRAINT Pais_nombre_UK UNIQUE (nombrePais)
+    CONSTRAINT Pais_nombre_UK UNIQUE (nombrePais),
+    CONSTRAINT Pais_Continente_FK FOREIGN KEY (Continente_idContinente) REFERENCES Continente (idContinente)
 );
 
 CREATE TABLE Departamento (
@@ -107,11 +115,9 @@ CREATE TABLE Departamento (
 CREATE TABLE Ciudad (
     idCiudad        BIGINT       NOT NULL AUTO_INCREMENT,
     nombreCiudad    VARCHAR(40)  NOT NULL,       -- [C6]
-    codigoCiudad    VARCHAR(3),                                   -- [C3]
     idDepartamento  BIGINT       NOT NULL,
     CONSTRAINT Ciudad_PK PRIMARY KEY (idCiudad),
     CONSTRAINT Ciudad_Departamento_FK FOREIGN KEY (idDepartamento) REFERENCES Departamento (idDepartamento),
-    CONSTRAINT Ciudad_codigo_UK UNIQUE (codigoCiudad),
     CONSTRAINT Ciudad_nombre_UK UNIQUE (nombreCiudad, idDepartamento)
 );
 

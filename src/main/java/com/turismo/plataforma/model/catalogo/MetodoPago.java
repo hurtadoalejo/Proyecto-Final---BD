@@ -11,6 +11,9 @@ import lombok.Setter;
 @Getter @Setter @NoArgsConstructor
 public class MetodoPago {
 
+    /** Solo se acepta en reservas hechas por un empleado (venta en sede). */
+    public static final String EFECTIVO = "EFECTIVO";
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "idMetodoPago")

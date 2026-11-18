@@ -4,6 +4,7 @@ import com.turismo.plataforma.dto.pago.PagoRequest;
 import com.turismo.plataforma.dto.pago.PagoResponse;
 import com.turismo.plataforma.exception.ConflictoException;
 import com.turismo.plataforma.exception.RecursoNoEncontradoException;
+import com.turismo.plataforma.exception.SolicitudInvalidaException;
 import com.turismo.plataforma.model.Factura;
 import com.turismo.plataforma.model.Reserva;
 import com.turismo.plataforma.model.Transaccion;
@@ -54,6 +55,10 @@ public class PagoService {
                     + reserva.getEstadoReserva().getNombreEstadoReserva());
         }
         MetodoPago metodoPago = catalogoService.metodoPago(request.metodoPago());
+        if (MetodoPago.EFECTIVO.equals(metodoPago.getNombreMetodoPago()) && reserva.getEmpleado() == null) {
+            throw new SolicitudInvalidaException("El pago en efectivo solo se acepta en reservas hechas por un "
+                    + "empleado en la sede");
+        }
         EstadoTransaccion aprobada = catalogoService.estadoTransaccion(EstadoTransaccion.APROBADA);
         EstadoReserva confirmada = catalogoService.estadoReserva(EstadoReserva.CONFIRMADA);
         LocalDateTime ahora = LocalDateTime.now();

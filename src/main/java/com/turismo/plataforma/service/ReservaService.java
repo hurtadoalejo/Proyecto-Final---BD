@@ -66,15 +66,16 @@ public class ReservaService {
         EstadoReserva pendiente = catalogoService.estadoReserva(EstadoReserva.PENDIENTE);
 
         validarPasajerosSinRepetir(request.pasajeros());
-        List<ReservaViaje> viajes = prepararViajes(request.viajes(), request.pasajeros());
-        List<DetalleReserva> detalles = prepararPasajeros(request.pasajeros());
+        Viajes viajes = prepararViajes(request.viajes(), request.pasajeros());
+        List<String> asientos = asignarAsientos(request.pasajeros(), viajes);
+        List<DetalleReserva> detalles = prepararPasajeros(request.pasajeros(), asientos);
 
         Reserva reserva = new Reserva();
         reserva.setCliente(cliente);
         reserva.setEmpleado(empleado);
         reserva.setOferta(oferta);
         reserva.setEstadoReserva(pendiente);
-        viajes.forEach(reserva::agregarViaje);
+        viajes.lista().forEach(reserva::agregarViaje);
         detalles.forEach(reserva::agregarDetalle);
         return ReservaResponse.from(reservaRepository.save(reserva));
     }
@@ -114,12 +115,12 @@ public class ReservaService {
         return oferta;
     }
 
-    /** Dentro de la reserva no se repiten asientos ni identificaciones. */
+    /** Dentro de la reserva no se repiten asientos (los que se piden) ni identificaciones. */
     private static void validarPasajerosSinRepetir(List<PasajeroRequest> pasajeros) {
         Set<String> asientos = new HashSet<>();
         Set<String> identificaciones = new HashSet<>();
         for (PasajeroRequest pasajero : pasajeros) {
-            if (!asientos.add(asiento(pasajero))) {
+            if (asiento(pasajero) != null && !asientos.add(asiento(pasajero))) {
                 throw new SolicitudInvalidaException("El asiento " + asiento(pasajero) + " está repetido");
             }
             if (!identificaciones.add(pasajero.numeroIdentificacion().trim())) {
@@ -129,10 +130,16 @@ public class ReservaService {
         }
     }
 
+    /** Viajes de la reserva, asientos ya ocupados en cualquiera de sus salidas y la menor capacidad. */
+    private record Viajes(List<ReservaViaje> lista, Set<String> asientosOcupados, int capacidadMinima) {
+    }
+
     /** Cada salida: existe, no ha partido, tiene cupo para todos y los asientos pedidos están libres. */
-    private List<ReservaViaje> prepararViajes(List<ViajeReservaRequest> solicitados, List<PasajeroRequest> pasajeros) {
+    private Viajes prepararViajes(List<ViajeReservaRequest> solicitados, List<PasajeroRequest> pasajeros) {
         Set<Long> vistos = new HashSet<>();
         List<ReservaViaje> viajes = new ArrayList<>();
+        Set<String> ocupados = new HashSet<>();
+        int capacidadMinima = Integer.MAX_VALUE;
         for (ViajeReservaRequest solicitado : solicitados) {
             Long idProgramacion = solicitado.idProgramacionViaje();
             if (!vistos.add(idProgramacion)) {
@@ -152,12 +159,15 @@ public class ReservaService {
                 throw new ConflictoException("La salida " + idProgramacion + " solo tiene " + Math.max(0, disponibles)
                         + " asientos disponibles");
             }
+            List<String> ocupadosSalida = programacionViajeRepository.listarAsientosOcupados(idProgramacion);
             for (PasajeroRequest pasajero : pasajeros) {
-                if (programacionViajeRepository.contarAsiento(idProgramacion, asiento(pasajero)) > 0) {
+                if (asiento(pasajero) != null && ocupadosSalida.contains(asiento(pasajero))) {
                     throw new ConflictoException("El asiento " + asiento(pasajero) + " ya está ocupado en la salida "
                             + idProgramacion);
                 }
             }
+            ocupados.addAll(ocupadosSalida);
+            capacidadMinima = Math.min(capacidadMinima, vehiculo.getCapacidad());
             TipoTrayecto tipoTrayecto = catalogoService.tipoTrayecto(solicitado.tipoTrayecto());
 
             ReservaViaje viaje = new ReservaViaje();
@@ -165,13 +175,40 @@ public class ReservaService {
             viaje.setTipoTrayecto(tipoTrayecto);
             viajes.add(viaje);
         }
-        return viajes;
+        return new Viajes(viajes, ocupados, capacidadMinima);
     }
 
-    private List<DetalleReserva> prepararPasajeros(List<PasajeroRequest> pasajeros) {
+    /**
+     * Respeta el asiento que se pidió; a los pasajeros sin asiento les da el primer número libre
+     * (1, 2, 3... hasta la capacidad del vehículo) en todas las salidas de la reserva.
+     */
+    private static List<String> asignarAsientos(List<PasajeroRequest> pasajeros, Viajes viajes) {
+        Set<String> tomados = new HashSet<>(viajes.asientosOcupados());
+        pasajeros.stream().map(ReservaService::asiento).filter(a -> a != null).forEach(tomados::add);
+        List<String> asientos = new ArrayList<>();
+        int siguiente = 1;
+        for (PasajeroRequest pasajero : pasajeros) {
+            String asiento = asiento(pasajero);
+            if (asiento == null) {
+                while (tomados.contains(String.valueOf(siguiente))) {
+                    siguiente++;
+                }
+                if (siguiente > viajes.capacidadMinima()) {
+                    throw new ConflictoException("No quedan asientos libres en todas las salidas de la reserva");
+                }
+                asiento = String.valueOf(siguiente);
+                tomados.add(asiento);
+            }
+            asientos.add(asiento);
+        }
+        return asientos;
+    }
+
+    private List<DetalleReserva> prepararPasajeros(List<PasajeroRequest> pasajeros, List<String> asientos) {
         Map<Long, Plan> planes = new HashMap<>();
         List<DetalleReserva> detalles = new ArrayList<>();
-        for (PasajeroRequest pasajero : pasajeros) {
+        for (int i = 0; i < pasajeros.size(); i++) {
+            PasajeroRequest pasajero = pasajeros.get(i);
             Plan plan = planes.computeIfAbsent(pasajero.idPlan(), idPlan -> planRepository.findById(idPlan)
                     .orElseThrow(() -> new SolicitudInvalidaException("No existe el plan con id " + idPlan)));
             TipoIdentificacion tipo = catalogoService.tipoIdentificacion(pasajero.tipoIdentificacion());
@@ -183,15 +220,17 @@ public class ReservaService {
             detalle.getNombre().setSegundoApellido(opcional(pasajero.segundoApellido()));
             detalle.setTipoIdentificacion(tipo);
             detalle.setIdentificacion(pasajero.numeroIdentificacion().trim());
-            detalle.setNumeroAsiento(asiento(pasajero));
+            detalle.setNumeroAsiento(asientos.get(i));
             detalle.setPlan(plan);
             detalles.add(detalle);
         }
         return detalles;
     }
 
+    /** Asiento pedido en mayúsculas, o null si no se pidió. */
     private static String asiento(PasajeroRequest pasajero) {
-        return pasajero.numeroAsiento().trim().toUpperCase(Locale.ROOT);
+        String asiento = pasajero.numeroAsiento();
+        return asiento == null || asiento.isBlank() ? null : asiento.trim().toUpperCase(Locale.ROOT);
     }
 
     private static String opcional(String texto) {

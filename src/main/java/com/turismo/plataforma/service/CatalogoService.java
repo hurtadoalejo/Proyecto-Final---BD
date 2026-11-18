@@ -5,11 +5,19 @@ import com.turismo.plataforma.dto.catalogo.CiudadResponse;
 import com.turismo.plataforma.dto.catalogo.IndicativoResponse;
 import com.turismo.plataforma.exception.SolicitudInvalidaException;
 import com.turismo.plataforma.model.catalogo.*;
+import com.turismo.plataforma.model.ubicacion.Ciudad;
+import com.turismo.plataforma.model.ubicacion.Continente;
+import com.turismo.plataforma.model.ubicacion.Departamento;
+import com.turismo.plataforma.model.ubicacion.Pais;
 import com.turismo.plataforma.repository.*;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -30,6 +38,7 @@ public class CatalogoService {
     private final MetodoPagoRepository metodoPagoRepository;
     private final TipoTransporteRepository tipoTransporteRepository;
     private final TipoTrayectoRepository tipoTrayectoRepository;
+    private final ContinenteRepository continenteRepository;
     private final PaisRepository paisRepository;
     private final DepartamentoRepository departamentoRepository;
     private final CiudadRepository ciudadRepository;
@@ -43,6 +52,7 @@ public class CatalogoService {
                            MetodoPagoRepository metodoPagoRepository,
                            TipoTransporteRepository tipoTransporteRepository,
                            TipoTrayectoRepository tipoTrayectoRepository,
+                           ContinenteRepository continenteRepository,
                            PaisRepository paisRepository,
                            DepartamentoRepository departamentoRepository,
                            CiudadRepository ciudadRepository) {
@@ -55,6 +65,7 @@ public class CatalogoService {
         this.metodoPagoRepository = metodoPagoRepository;
         this.tipoTransporteRepository = tipoTransporteRepository;
         this.tipoTrayectoRepository = tipoTrayectoRepository;
+        this.continenteRepository = continenteRepository;
         this.paisRepository = paisRepository;
         this.departamentoRepository = departamentoRepository;
         this.ciudadRepository = ciudadRepository;
@@ -62,17 +73,38 @@ public class CatalogoService {
 
     // ------------------------------------------------------------------ listas
 
+    public List<CatalogoItem> continentes() {
+        return continenteRepository.findAllByOrderByIdContinente().stream()
+                .map(c -> new CatalogoItem(c.getIdContinente(), c.getNombreContinente()))
+                .toList();
+    }
+
+    public List<CatalogoItem> paisesPorContinente(Long idContinente) {
+        return paisRepository.findByContinenteIdContinenteOrderByNombrePais(idContinente).stream()
+                .map(p -> new CatalogoItem(p.getIdPais(), p.getNombrePais()))
+                .toList();
+    }
+
     public List<CatalogoItem> paises() {
         return paisRepository.findAllByOrderByNombrePais().stream()
                 .map(p -> new CatalogoItem(p.getIdPais(), p.getNombrePais()))
                 .toList();
     }
 
-    /** Indicativos telefónicos (valor a enviar: indicativo, ej. "+57"). */
+    /** Indicativos telefónicos de todos los países (valor a enviar: indicativo, ej. "+57"). */
     public List<IndicativoResponse> indicativos() {
-        return paisRepository.findAllByOrderByNombrePais().stream()
-                .filter(p -> p.getIndicativo() != null)
-                .map(p -> new IndicativoResponse(p.getIdPais(), p.getNombrePais(), "+" + p.getIndicativo()))
+        return aIndicativos(paisRepository.findAllByOrderByNombrePais());
+    }
+
+    /** Indicativos de los países que no son de Europa. */
+    public List<IndicativoResponse> indicativosFueraDeEuropa() {
+        return aIndicativos(paisRepository.findByContinenteNombreContinenteNotOrderByIdPais(Continente.EUROPA));
+    }
+
+    private static List<IndicativoResponse> aIndicativos(List<Pais> paises) {
+        return paises.stream()
+                .filter(p -> p.getIndicativoPais() != null)
+                .map(p -> new IndicativoResponse(p.getIdPais(), p.getNombrePais(), "+" + p.getIndicativoPais()))
                 .toList();
     }
 
@@ -88,9 +120,41 @@ public class CatalogoService {
                 .toList();
     }
 
-    /** Ciudades con código (BOG, MAD...): las que se usan en la búsqueda de viajes. */
+    /** Todos los países con sus departamentos y ciudades: { "Colombia": { "Antioquia": ["Medellín", ...] } }. */
+    public Map<String, Map<String, List<String>>> ubicaciones() {
+        return armarUbicaciones(paisRepository.findAll(Sort.by("idPais")));
+    }
+
+    /** Países de Europa con sus departamentos y ciudades (las ciudades de las rutas y España). */
+    public Map<String, Map<String, List<String>>> ubicacionesEuropa() {
+        return armarUbicaciones(paisRepository.findByContinenteNombreContinenteOrderByIdPais(Continente.EUROPA));
+    }
+
+    /** Países que no son de Europa con sus departamentos y ciudades (clientes y sedes). */
+    public Map<String, Map<String, List<String>>> ubicacionesFueraDeEuropa() {
+        return armarUbicaciones(paisRepository.findByContinenteNombreContinenteNotOrderByIdPais(Continente.EUROPA));
+    }
+
+    /** { país: { departamento: [ciudades] } } en el orden de carga. Un país sin ciudades queda como {}. */
+    private Map<String, Map<String, List<String>>> armarUbicaciones(List<Pais> paises) {
+        Map<String, Map<String, List<String>>> ubicaciones = new LinkedHashMap<>();
+        paises.forEach(p -> ubicaciones.put(p.getNombrePais(), new LinkedHashMap<>()));
+        if (paises.isEmpty()) {
+            return ubicaciones;
+        }
+        List<Long> ids = paises.stream().map(Pais::getIdPais).toList();
+        for (Ciudad ciudad : ciudadRepository.listarPorPaises(ids)) {
+            Departamento departamento = ciudad.getDepartamento();
+            ubicaciones.get(departamento.getPais().getNombrePais())
+                    .computeIfAbsent(departamento.getNombreDepartamento(), d -> new ArrayList<>())
+                    .add(ciudad.getNombreCiudad());
+        }
+        return ubicaciones;
+    }
+
+    /** Ciudades que tienen rutas: las que se usan en la búsqueda de viajes. */
     public List<CiudadResponse> ciudadesDestino() {
-        return ciudadRepository.listarConCodigo().stream()
+        return ciudadRepository.listarConRutas().stream()
                 .map(CiudadResponse::from)
                 .toList();
     }
@@ -188,6 +252,21 @@ public class CatalogoService {
     public TipoTrayecto tipoTrayecto(String nombre) {
         return encontrar(tipoTrayectoRepository.findByNombreTipoTrayectoIgnoreCase(limpiar(nombre)),
                 "tipo de trayecto", nombre);
+    }
+
+    /** Ciudad por nombres (como en el formulario): debe existir en ese departamento y país. */
+    public Ciudad ciudad(String nombrePais, String nombreDepartamento, String nombreCiudad) {
+        Pais pais = paisRepository.findByNombrePaisIgnoreCase(nombrePais.trim())
+                .orElseThrow(() -> new SolicitudInvalidaException("No existe el país " + nombrePais));
+        Departamento departamento = departamentoRepository
+                .findByNombreDepartamentoIgnoreCaseAndPaisIdPais(nombreDepartamento.trim(), pais.getIdPais())
+                .orElseThrow(() -> new SolicitudInvalidaException("El departamento " + nombreDepartamento
+                        + " no existe en " + pais.getNombrePais()));
+        return ciudadRepository
+                .findByNombreCiudadIgnoreCaseAndDepartamentoIdDepartamento(nombreCiudad.trim(),
+                        departamento.getIdDepartamento())
+                .orElseThrow(() -> new SolicitudInvalidaException("La ciudad " + nombreCiudad
+                        + " no existe en " + departamento.getNombreDepartamento()));
     }
 
     public Cargo cargo(Long idCargo) {

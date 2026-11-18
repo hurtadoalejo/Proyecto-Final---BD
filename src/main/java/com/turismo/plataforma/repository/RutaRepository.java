@@ -9,7 +9,7 @@ import java.util.List;
 
 public interface RutaRepository extends JpaRepository<Ruta, Long> {
 
-    /** Rutas cuyo origen o destino (nombre o código de ciudad) contiene el texto, con todos sus datos. */
+    /** Rutas cuyo origen o destino (nombre de ciudad) contiene el texto, con todos sus datos. */
     @Query("""
            select r from Ruta r
              join fetch r.ciudadOrigen co
@@ -19,8 +19,6 @@ public interface RutaRepository extends JpaRepository<Ruta, Long> {
              left join fetch v.tipoTransporte
            where lower(co.nombreCiudad) like lower(concat('%', :texto, '%'))
               or lower(cd.nombreCiudad) like lower(concat('%', :texto, '%'))
-              or lower(co.codigoCiudad) = lower(:texto)
-              or lower(cd.codigoCiudad) = lower(:texto)
            order by co.nombreCiudad, cd.nombreCiudad
            """)
     List<Ruta> buscar(@Param("texto") String texto);

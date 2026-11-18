@@ -7,11 +7,6 @@ import com.turismo.plataforma.model.NombreCompleto;
 import com.turismo.plataforma.model.Usuario;
 import com.turismo.plataforma.model.catalogo.TipoIdentificacion;
 import com.turismo.plataforma.model.ubicacion.Ciudad;
-import com.turismo.plataforma.model.ubicacion.Departamento;
-import com.turismo.plataforma.model.ubicacion.Pais;
-import com.turismo.plataforma.repository.CiudadRepository;
-import com.turismo.plataforma.repository.DepartamentoRepository;
-import com.turismo.plataforma.repository.PaisRepository;
 import com.turismo.plataforma.repository.UsuarioRepository;
 import org.springframework.stereotype.Service;
 
@@ -22,18 +17,10 @@ import java.util.Locale;
 public class UsuarioService {
 
     private final UsuarioRepository usuarioRepository;
-    private final PaisRepository paisRepository;
-    private final DepartamentoRepository departamentoRepository;
-    private final CiudadRepository ciudadRepository;
     private final CatalogoService catalogoService;
 
-    public UsuarioService(UsuarioRepository usuarioRepository, PaisRepository paisRepository,
-                          DepartamentoRepository departamentoRepository, CiudadRepository ciudadRepository,
-                          CatalogoService catalogoService) {
+    public UsuarioService(UsuarioRepository usuarioRepository, CatalogoService catalogoService) {
         this.usuarioRepository = usuarioRepository;
-        this.paisRepository = paisRepository;
-        this.departamentoRepository = departamentoRepository;
-        this.ciudadRepository = ciudadRepository;
         this.catalogoService = catalogoService;
     }
 
@@ -63,7 +50,7 @@ public class UsuarioService {
      */
     public void aplicarDatosPersonales(Usuario usuario, DatosPersonales datos) {
         TipoIdentificacion tipoIdentificacion = catalogoService.tipoIdentificacion(datos.tipoIdentificacion());
-        Ciudad ciudad = buscarUbicacion(datos);
+        Ciudad ciudad = catalogoService.ciudad(datos.pais(), datos.departamento(), datos.ciudad());
         String telefono = unirTelefono(datos.indicativo(), datos.telefono());
 
         NombreCompleto nombre = usuario.getNombre();
@@ -88,21 +75,6 @@ public class UsuarioService {
 
     public static String normalizarCorreo(String correo) {
         return correo.trim().toLowerCase(Locale.ROOT);
-    }
-
-    /** País, departamento y ciudad llegan por nombre (los del formulario del frontend). */
-    private Ciudad buscarUbicacion(DatosPersonales datos) {
-        Pais pais = paisRepository.findByNombrePaisIgnoreCase(datos.pais().trim())
-                .orElseThrow(() -> new SolicitudInvalidaException("No existe el país " + datos.pais()));
-        Departamento departamento = departamentoRepository
-                .findByNombreDepartamentoIgnoreCaseAndPaisIdPais(datos.departamento().trim(), pais.getIdPais())
-                .orElseThrow(() -> new SolicitudInvalidaException("El departamento " + datos.departamento()
-                        + " no existe en " + pais.getNombrePais()));
-        return ciudadRepository
-                .findByNombreCiudadIgnoreCaseAndDepartamentoIdDepartamento(datos.ciudad().trim(),
-                        departamento.getIdDepartamento())
-                .orElseThrow(() -> new SolicitudInvalidaException("La ciudad " + datos.ciudad()
-                        + " no existe en " + departamento.getNombreDepartamento()));
     }
 
     /** Guarda indicativo y número juntos en la columna telefono: "+57 3001234567". */

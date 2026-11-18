@@ -27,4 +27,6 @@ public interface NotificacionRepository extends JpaRepository<Notificacion, Long
            order by n.idNotificacion desc
            """)
     List<Notificacion> listarPorCliente(@Param("idCliente") Long idCliente);
+
+    List<Notificacion> findByOfertaIdOferta(Long idOferta);
 }

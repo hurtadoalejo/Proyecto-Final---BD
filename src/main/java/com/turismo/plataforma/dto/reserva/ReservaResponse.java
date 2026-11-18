@@ -20,8 +20,8 @@ public record ReservaResponse(Long idReserva, LocalDateTime fechaReserva, String
                               BigDecimal subtotal, BigDecimal descuento, BigDecimal valorTotal,
                               PagoResponse pago) {
 
-    public record Viaje(Long idProgramacionViaje, String tipoTrayecto, String codigoOrigen, String ciudadOrigen,
-                        String codigoDestino, String ciudadDestino, LocalDateTime fechaHoraSalida,
+    public record Viaje(Long idProgramacionViaje, String tipoTrayecto, String ciudadOrigen,
+                        String ciudadDestino, LocalDateTime fechaHoraSalida,
                         LocalDateTime fechaHoraLlegada, BigDecimal precioBase) {
 
         static Viaje from(ReservaViaje viaje) {
@@ -29,9 +29,7 @@ public record ReservaResponse(Long idReserva, LocalDateTime fechaReserva, String
             return new Viaje(
                     viaje.getProgramacionViaje().getIdProgramacionViaje(),
                     viaje.getTipoTrayecto().getNombreTipoTrayecto(),
-                    ruta.getCiudadOrigen().getCodigoCiudad(),
                     ruta.getCiudadOrigen().getNombreCiudad(),
-                    ruta.getCiudadDestino().getCodigoCiudad(),
                     ruta.getCiudadDestino().getNombreCiudad(),
                     viaje.getProgramacionViaje().getFechaHoraSalida(),
                     viaje.getProgramacionViaje().calcularLlegada(),

@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Map;
 
 /** Listas para los desplegables del frontend (solo lectura). */
 @RestController
@@ -20,6 +21,38 @@ public class CatalogoController {
 
     public CatalogoController(CatalogoService catalogoService) {
         this.catalogoService = catalogoService;
+    }
+
+    // ---- Ubicaciones completas: { país: { departamento: [ciudades] } } ----
+
+    /** Todos los países. */
+    @GetMapping("/ubicaciones")
+    public Map<String, Map<String, List<String>>> ubicaciones() {
+        return catalogoService.ubicaciones();
+    }
+
+    /** Solo países de Europa (ciudades de las rutas y España). */
+    @GetMapping("/ubicaciones/europa")
+    public Map<String, Map<String, List<String>>> ubicacionesEuropa() {
+        return catalogoService.ubicacionesEuropa();
+    }
+
+    /** Países que no son de Europa (clientes y sedes). */
+    @GetMapping("/ubicaciones/no-europa")
+    public Map<String, Map<String, List<String>>> ubicacionesFueraDeEuropa() {
+        return catalogoService.ubicacionesFueraDeEuropa();
+    }
+
+    // ---- Consultas individuales ----
+
+    @GetMapping("/continentes")
+    public List<CatalogoItem> continentes() {
+        return catalogoService.continentes();
+    }
+
+    @GetMapping("/continentes/{idContinente}/paises")
+    public List<CatalogoItem> paisesPorContinente(@PathVariable("idContinente") Long idContinente) {
+        return catalogoService.paisesPorContinente(idContinente);
     }
 
     @GetMapping("/paises")
@@ -33,6 +66,12 @@ public class CatalogoController {
         return catalogoService.indicativos();
     }
 
+    /** Nombre e indicativo de los países que no son de Europa: [{ idPais, nombrePais, indicativo: "+57" }]. */
+    @GetMapping("/indicativos/no-europa")
+    public List<IndicativoResponse> indicativosFueraDeEuropa() {
+        return catalogoService.indicativosFueraDeEuropa();
+    }
+
     @GetMapping("/paises/{idPais}/departamentos")
     public List<CatalogoItem> departamentos(@PathVariable("idPais") Long idPais) {
         return catalogoService.departamentos(idPais);
@@ -43,7 +82,7 @@ public class CatalogoController {
         return catalogoService.ciudades(idDepartamento);
     }
 
-    /** Ciudades con código de 3 letras: origen y destino de la búsqueda de viajes. */
+    /** Ciudades que tienen rutas: origen y destino de la búsqueda de viajes. */
     @GetMapping("/ciudades-destino")
     public List<CiudadResponse> ciudadesDestino() {
         return catalogoService.ciudadesDestino();

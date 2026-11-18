@@ -19,6 +19,10 @@ public class Pais {
     private String nombrePais;
 
     /** Indicativo telefónico del país, sin el "+" (ej.: 57). */
-    @Column(name = "indicativo")
-    private Integer indicativo;
+    @Column(name = "indicativoPais")
+    private Integer indicativoPais;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "Continente_idContinente", nullable = false)
+    private Continente continente;
 }

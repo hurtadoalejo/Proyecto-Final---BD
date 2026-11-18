@@ -4,12 +4,19 @@ import com.turismo.plataforma.dto.oferta.OfertaRequest;
 import com.turismo.plataforma.dto.oferta.OfertaResponse;
 import com.turismo.plataforma.exception.RecursoNoEncontradoException;
 import com.turismo.plataforma.exception.SolicitudInvalidaException;
+import com.turismo.plataforma.model.Cliente;
+import com.turismo.plataforma.model.Notificacion;
 import com.turismo.plataforma.model.Oferta;
+import com.turismo.plataforma.model.catalogo.EstadoNotificacion;
+import com.turismo.plataforma.repository.ClienteRepository;
+import com.turismo.plataforma.repository.NotificacionRepository;
 import com.turismo.plataforma.repository.OfertaRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 /** Ofertas: porcentaje de descuento que se aplica a una reserva mientras esté vigente. */
@@ -17,10 +24,19 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class OfertaService {
 
-    private final OfertaRepository ofertaRepository;
+    private static final DateTimeFormatter FECHA = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
-    public OfertaService(OfertaRepository ofertaRepository) {
+    private final OfertaRepository ofertaRepository;
+    private final NotificacionRepository notificacionRepository;
+    private final ClienteRepository clienteRepository;
+    private final CatalogoService catalogoService;
+
+    public OfertaService(OfertaRepository ofertaRepository, NotificacionRepository notificacionRepository,
+                         ClienteRepository clienteRepository, CatalogoService catalogoService) {
         this.ofertaRepository = ofertaRepository;
+        this.notificacionRepository = notificacionRepository;
+        this.clienteRepository = clienteRepository;
+        this.catalogoService = catalogoService;
     }
 
     /** vigentes = true: solo las que aplican hoy. */
@@ -36,12 +52,15 @@ public class OfertaService {
         return OfertaResponse.from(buscarEntidad(id));
     }
 
+    /** Crea la oferta y la notifica automáticamente a todos los clientes (simulado: queda registrado en la BD). */
     @Transactional
     public OfertaResponse crear(OfertaRequest request) {
         validarFechas(request);
         Oferta oferta = new Oferta();
         aplicar(oferta, request);
-        return OfertaResponse.from(ofertaRepository.save(oferta));
+        Oferta guardada = ofertaRepository.save(oferta);
+        notificarClientes(guardada);
+        return OfertaResponse.from(guardada);
     }
 
     @Transactional
@@ -52,11 +71,34 @@ public class OfertaService {
         return OfertaResponse.from(oferta);
     }
 
-    /** Falla con 409 si alguna reserva o notificación usa la oferta. */
+    /** Borra también sus notificaciones. Falla con 409 si alguna reserva usa la oferta. */
     @Transactional
     public void eliminar(Long id) {
-        ofertaRepository.delete(buscarEntidad(id));
+        Oferta oferta = buscarEntidad(id);
+        notificacionRepository.deleteAll(notificacionRepository.findByOfertaIdOferta(id));
+        ofertaRepository.delete(oferta);
         ofertaRepository.flush();
+    }
+
+    /** Una notificación ENVIADA, ligada a todos los clientes por la tabla ClienteNotificacion. */
+    private void notificarClientes(Oferta oferta) {
+        List<Cliente> clientes = clienteRepository.findAll();
+        if (clientes.isEmpty()) {
+            return;
+        }
+        String mensaje = "¡Nueva oferta! " + oferta.getTitulo() + ": "
+                + oferta.getPorcentajeDescuento().stripTrailingZeros().toPlainString() + "% de descuento del "
+                + oferta.getFechaInicio().format(FECHA) + " al " + oferta.getFechaFin().format(FECHA) + ".";
+        if (oferta.getDescripcion() != null) {
+            mensaje += " " + oferta.getDescripcion();
+        }
+        Notificacion notificacion = new Notificacion();
+        notificacion.setMensaje(mensaje.length() > 200 ? mensaje.substring(0, 197) + "..." : mensaje);
+        notificacion.setEstadoNotificacion(catalogoService.estadoNotificacion(EstadoNotificacion.ENVIADO));
+        notificacion.setFechaEnvio(LocalDateTime.now());
+        notificacion.setOferta(oferta);
+        notificacion.getClientes().addAll(clientes);
+        notificacionRepository.save(notificacion);
     }
 
     private static void validarFechas(OfertaRequest request) {
