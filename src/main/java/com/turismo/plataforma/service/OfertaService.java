@@ -12,6 +12,7 @@ import com.turismo.plataforma.model.catalogo.EstadoNotificacion;
 import com.turismo.plataforma.repository.ClienteRepository;
 import com.turismo.plataforma.repository.NotificacionRepository;
 import com.turismo.plataforma.repository.OfertaRepository;
+import com.turismo.plataforma.repository.ReservaRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,9 +20,11 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /** Ofertas: porcentaje de descuento que se aplica a una reserva mientras esté vigente. */
 @Service
@@ -34,13 +37,16 @@ public class OfertaService {
     private final NotificacionRepository notificacionRepository;
     private final ClienteRepository clienteRepository;
     private final CatalogoService catalogoService;
+    private final ReservaRepository reservaRepository;
 
     public OfertaService(OfertaRepository ofertaRepository, NotificacionRepository notificacionRepository,
-                         ClienteRepository clienteRepository, CatalogoService catalogoService) {
+                         ClienteRepository clienteRepository, CatalogoService catalogoService,
+                         ReservaRepository reservaRepository) {
         this.ofertaRepository = ofertaRepository;
         this.notificacionRepository = notificacionRepository;
         this.clienteRepository = clienteRepository;
         this.catalogoService = catalogoService;
+        this.reservaRepository = reservaRepository;
     }
 
     /** vigentes = true: solo las que aplican hoy. */
@@ -53,34 +59,31 @@ public class OfertaService {
     }
 
     /**
-     * Cupones de un cliente: ofertas vigentes hoy que le llegaron por notificación
-     * (cada oferta una sola vez, con la fecha de la primera notificación).
+     * Ofertas disponibles para un cliente: las vigentes hoy que todavía no ha usado en una reserva
+     * (cada oferta se usa una sola vez; si cancela la reserva, la oferta vuelve a quedar disponible).
+     * fechaNotificacion es la primera vez que se le avisó de la oferta (null si no le llegó aviso).
      */
     public List<CuponResponse> cuponesDeCliente(Long idCliente) {
         if (!clienteRepository.existsById(idCliente)) {
             throw new RecursoNoEncontradoException("No existe el cliente con id " + idCliente);
         }
         LocalDate hoy = LocalDate.now();
-        Map<Long, CuponResponse> cupones = new LinkedHashMap<>();
+        Map<Long, LocalDateTime> avisos = new LinkedHashMap<>();
         for (Notificacion n : notificacionRepository.listarPorCliente(idCliente)) {
-            Oferta oferta = n.getOferta();
-            if (oferta == null || !oferta.estaVigente(hoy)) {
-                continue;
+            if (n.getOferta() != null && n.getFechaEnvio() != null) {
+                avisos.merge(n.getOferta().getIdOferta(), n.getFechaEnvio(),
+                        (x, y) -> x.isBefore(y) ? x : y);
             }
-            CuponResponse cupon = new CuponResponse(oferta.getIdOferta(), oferta.getTitulo(), oferta.getDescripcion(),
-                    oferta.getPorcentajeDescuento(), oferta.getFechaInicio(), oferta.getFechaFin(), n.getFechaEnvio());
-            cupones.merge(oferta.getIdOferta(), cupon, OfertaService::anterior);
         }
-        return cupones.values().stream()
+        Set<Long> usadas = new HashSet<>(reservaRepository.ofertasUsadasPorCliente(idCliente));
+        return ofertaRepository.findByFechaInicioLessThanEqualAndFechaFinGreaterThanEqualOrderByFechaFin(hoy, hoy)
+                .stream()
+                .filter(oferta -> !usadas.contains(oferta.getIdOferta()))
+                .map(oferta -> new CuponResponse(oferta.getIdOferta(), oferta.getTitulo(), oferta.getDescripcion(),
+                        oferta.getPorcentajeDescuento(), oferta.getFechaInicio(), oferta.getFechaFin(),
+                        avisos.get(oferta.getIdOferta())))
                 .sorted(Comparator.comparing(CuponResponse::fechaFin))
                 .toList();
-    }
-
-    /** Se queda con la notificación más antigua (la primera vez que se le avisó). */
-    private static CuponResponse anterior(CuponResponse a, CuponResponse b) {
-        if (a.fechaNotificacion() == null) return b;
-        if (b.fechaNotificacion() == null) return a;
-        return a.fechaNotificacion().isBefore(b.fechaNotificacion()) ? a : b;
     }
 
     public OfertaResponse obtener(Long id) {

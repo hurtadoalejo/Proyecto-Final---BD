@@ -15,6 +15,8 @@ public class EstadoTransaccion {
     public static final String PENDIENTE = "PENDIENTE";
     public static final String APROBADA = "APROBADA";
     public static final String RECHAZADA = "RECHAZADA";
+    /** Pago devuelto porque el cliente canceló la reserva a tiempo. */
+    public static final String REEMBOLSADA = "REEMBOLSADA";
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

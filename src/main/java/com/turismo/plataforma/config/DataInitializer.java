@@ -1,6 +1,7 @@
 package com.turismo.plataforma.config;
 
 import com.turismo.plataforma.model.Empleado;
+import com.turismo.plataforma.model.catalogo.EstadoTransaccion;
 import com.turismo.plataforma.model.catalogo.Rol;
 import com.turismo.plataforma.repository.*;
 import org.slf4j.Logger;
@@ -30,23 +31,27 @@ public class DataInitializer implements ApplicationRunner {
     private final TipoIdentificacionRepository tipoIdentificacionRepository;
     private final CargoRepository cargoRepository;
     private final SedeRepository sedeRepository;
+    private final EstadoTransaccionRepository estadoTransaccionRepository;
     private final String contraseniaAdmin;
 
     public DataInitializer(UsuarioRepository usuarioRepository, RolRepository rolRepository,
                            TipoIdentificacionRepository tipoIdentificacionRepository,
                            CargoRepository cargoRepository, SedeRepository sedeRepository,
+                           EstadoTransaccionRepository estadoTransaccionRepository,
                            @Value("${app.admin.contrasenia}") String contraseniaAdmin) {
         this.usuarioRepository = usuarioRepository;
         this.rolRepository = rolRepository;
         this.tipoIdentificacionRepository = tipoIdentificacionRepository;
         this.cargoRepository = cargoRepository;
         this.sedeRepository = sedeRepository;
+        this.estadoTransaccionRepository = estadoTransaccionRepository;
         this.contraseniaAdmin = contraseniaAdmin;
     }
 
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
+        crearEstadoReembolsada();
         if (usuarioRepository.existsByRolNombreRol(Rol.ADMIN)) {
             return;
         }
@@ -81,5 +86,15 @@ public class DataInitializer implements ApplicationRunner {
         admin.setFechaContratacion(LocalDate.of(2024, 1, 15));
         usuarioRepository.save(admin);
         log.info("Administrador inicial creado: {} (cambia la contraseña después de entrar)", CORREO_ADMIN);
+    }
+
+    /** El estado REEMBOLSADA (cancelaciones de reservas pagadas) se agregó después; si falta, se crea. */
+    private void crearEstadoReembolsada() {
+        if (estadoTransaccionRepository.findByNombreEstadoTransaccionIgnoreCase(EstadoTransaccion.REEMBOLSADA).isEmpty()) {
+            EstadoTransaccion reembolsada = new EstadoTransaccion();
+            reembolsada.setNombreEstadoTransaccion(EstadoTransaccion.REEMBOLSADA);
+            estadoTransaccionRepository.save(reembolsada);
+            log.info("Se agregó el estado de transacción REEMBOLSADA");
+        }
     }
 }

@@ -4,13 +4,15 @@
 --  (Oracle SQL Developer Data Modeler, ProyectoFinal.dmd, versión del 13-nov-2026).
 --
 --  Nombres de tablas y columnas: EXACTOS a los del modelo.
---  Ajustes sobre el modelo (marcados con [C1], [C2], [C4], [C5] y [C6]):
+--  Ajustes sobre el modelo (marcados con [C1], [C2], [C4], [C5], [C6] y [C7]):
 --   [C1] Fechas con hora (salida, reserva, pago, envío, emisión): DATE -> DATETIME.
 --   [C2] Dinero y medidas: NUMERIC sin escala -> DECIMAL con decimales.
 --   [C4] UNIQUE en Usuario.correo y Usuario.identificacion.
 --   [C5] Notificacion.idOferta pasa a ser opcional (recordatorios sin oferta).
 --   [C6] nombreDepartamento y nombreCiudad: VARCHAR(25) -> VARCHAR(40), porque el registro
 --        del frontend tiene nombres más largos (ej. "Ciudad Autónoma de Buenos Aires").
+--   [C7] DetalleReserva.idProgramacionViaje (FK a ReservaViaje): un detalle por pasajero y por
+--        viaje, para que la ida y el regreso tengan cada uno su registro y su asiento.
 -- =====================================================================
 
 DROP DATABASE IF EXISTS turismo_db;
@@ -299,10 +301,13 @@ CREATE TABLE ReservaViaje (
     CONSTRAINT ReservaViaje_TipoTrayecto_FK FOREIGN KEY (idTipoTrayecto) REFERENCES TipoTrayecto (idTipoTrayecto)
 );
 
--- idDetalle es el número del pasajero dentro de la reserva (1, 2, 3...).
+-- Un detalle por pasajero y por viaje de la reserva: en una reserva de ida y vuelta cada
+-- pasajero tiene dos detalles (uno por salida), cada uno con su asiento. [C7]
+-- idDetalle es el número del detalle dentro de la reserva (1, 2, 3...).
 CREATE TABLE DetalleReserva (
     idDetalle             BIGINT       NOT NULL,
     idReserva             BIGINT       NOT NULL,
+    idProgramacionViaje   BIGINT       NOT NULL,                  -- [C7] salida en la que viaja
     primerNombre          VARCHAR(20)  NOT NULL,
     segundoNombre         VARCHAR(20),
     primerApellido        VARCHAR(20)  NOT NULL,
@@ -313,9 +318,13 @@ CREATE TABLE DetalleReserva (
     idPlan                BIGINT       NOT NULL,
     CONSTRAINT DetalleReserva_PK PRIMARY KEY (idDetalle, idReserva),
     CONSTRAINT DetalleReserva_Reserva_FK FOREIGN KEY (idReserva) REFERENCES Reserva (idReserva) ON DELETE CASCADE,
+    CONSTRAINT DetRes_ResViaje_FK FOREIGN KEY (idReserva, idProgramacionViaje)
+        REFERENCES ReservaViaje (idReserva, idProgramacionViaje) ON DELETE CASCADE,  -- [C7]
     CONSTRAINT DetRes_TipoId_F FOREIGN KEY (idTipoIdentificacion) REFERENCES TipoIdentificacion (idTipoIdentificacion),
-    CONSTRAINT DetalleReserva_Plan_FK FOREIGN KEY (idPlan) REFERENCES Plan (idPlan)
+    CONSTRAINT DetalleReserva_Plan_FK FOREIGN KEY (idPlan) REFERENCES Plan (idPlan),
+    CONSTRAINT DetRes_pasajero_UK UNIQUE (idReserva, idProgramacionViaje, identificacion)  -- [C7]
 );
+CREATE INDEX DetalleReserva_salida_IX ON DetalleReserva (idProgramacionViaje);
 
 -- ---------------------------------------------------------------------
 -- Pago: Transaccion (débil de Reserva) y Factura (débil de Transaccion)

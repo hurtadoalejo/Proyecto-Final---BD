@@ -201,7 +201,7 @@ Los ids de ejemplo de este documento pueden cambiar; tómalos siempre de estas l
 }
 ```
 
-Cada pasajero viaja en todos los viajes de la reserva con el mismo asiento y plan. **`numeroAsiento` es opcional**: si va en `null`, el backend asigna el primer número libre (1, 2, 3… hasta la capacidad del vehículo) en todas las salidas de la reserva; si se envía (ej. `"12A"`), se respeta y responde 409 si ya está ocupado. Cuando la compra la hace un **empleado**, `idEmpleado` es el id del empleado y `idCliente` el del cliente al que le vende. `idEmpleado` (quien atiende) e `idOferta` son opcionales; la oferta debe estar vigente (`GET /api/ofertas?vigentes=true`). Planes: `GET /api/planes`.
+Cada pasajero viaja en todos los viajes de la reserva con el mismo plan, y por **cada viaje** se guarda un `DetalleReserva` con su asiento: en una reserva de ida y vuelta cada pasajero queda registrado dos veces (ida y regreso). **`numeroAsiento` es opcional**: si va en `null`, el backend asigna en cada salida el primer número libre (1, 2, 3… hasta la capacidad del vehículo); si se envía (ej. `"12A"`), se usa en todas las salidas y responde 409 si ya está ocupado en alguna. El plan se cobra una vez por pasajero. Cuando la compra la hace un **empleado**, `idEmpleado` es el id del empleado y `idCliente` el del cliente al que le vende. `idEmpleado` (quien atiende) e `idOferta` son opcionales; la oferta debe estar vigente y el cliente no puede haberla usado en otra reserva no cancelada (responde 409); las que puede usar salen en `GET /api/clientes/{id}/ofertas`. Planes: `GET /api/planes`.
 
 **201 Created** – la reserva queda **PENDIENTE**:
 
@@ -216,7 +216,8 @@ Cada pasajero viaja en todos los viajes de la reserva con el mismo asiento y pla
       "fechaHoraLlegada": "2026-12-10T08:30:00", "precioBase": 520000.00 }
   ],
   "pasajeros": [
-    { "idDetalle": 1, "tipoIdentificacion": "CC", "numeroIdentificacion": "1094912345", "nombreCompleto": "Juan Pérez",
+    { "idDetalle": 1, "idProgramacionViaje": 1234, "tipoTrayecto": "IDA",
+      "tipoIdentificacion": "CC", "numeroIdentificacion": "1094912345", "nombreCompleto": "Juan Pérez",
       "numeroAsiento": "12A", "idPlan": 1, "nombrePlan": "Básico", "precioExtra": 0.00 }
   ],
   "subtotal": 560000.00, "descuento": 56000.00, "valorTotal": 504000.00,
@@ -249,11 +250,11 @@ Errores: **400** datos o ids inválidos, asiento repetido dentro de la reserva, 
 |---|---|
 | `GET /api/reservas?idCliente=2` | "Mis reservas": `[{ idReserva, fechaReserva, estadoReserva, idCliente, nombreCliente, pagada }]` (sin `idCliente` = todas) |
 | `GET /api/reservas/{id}` | Detalle completo (mismo formato de la creación; `pago` lleno si ya pagó) |
-| `PUT /api/reservas/{id}/cancelar` | Solo reservas PENDIENTES → CANCELADA (libera los asientos) |
+| `PUT /api/reservas/{id}/cancelar?idCliente=11` | El **cliente dueño** cancela su reserva (pendiente o pagada) si faltan **5 días o más** para el día del primer viaje. Libera los asientos y la oferta; si estaba pagada, el pago queda `REEMBOLSADA`. 403 si `idCliente` no es el dueño; 409 si faltan menos de 5 días o ya estaba cancelada |
 | `DELETE /api/reservas/{id}` | Solo si no tiene pago |
 | `GET /api/reservas/{id}/pago` | Pago y factura |
 | `GET /api/clientes/{id}/compras` | Historial de compras del cliente: lista con el mismo formato de `GET /api/reservas/{id}` (viajes, pasajeros con asiento, subtotal, descuento, total y `pago` con la factura), de la más reciente a la más antigua |
-| `GET /api/clientes/{id}/cupones` | Cupones disponibles: ofertas vigentes que le llegaron por notificación `[{ idOferta, titulo, descripcion, porcentajeDescuento, fechaInicio, fechaFin, fechaNotificacion }]` |
+| `GET /api/clientes/{id}/ofertas` (también `/cupones`) | Ofertas disponibles para el cliente: vigentes hoy y que todavía no ha usado `[{ idOferta, titulo, descripcion, porcentajeDescuento, fechaInicio, fechaFin, fechaNotificacion }]` (`fechaNotificacion` = cuándo se le avisó, o null) |
 | `GET /api/clientes/resumen?q=&gastoMin=&gastoMax=` | Gestión de clientes: `[{ datosPersonales: {...igual a GET /api/clientes/{id}}, totalGastado, comprasPagadas, reservas }]`, del que más gastó al que menos. `totalGastado` suma solo pagos APROBADOS; los filtros son opcionales e incluyen el límite |
 | `GET /api/clientes/{id}/millas` | `{ idCliente, kilometrosRecorridos, millasAcumuladas }` (reservas confirmadas) |
 

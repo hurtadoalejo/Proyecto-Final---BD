@@ -1,11 +1,13 @@
 package com.turismo.plataforma.service;
 
 import com.turismo.plataforma.dto.reserva.*;
+import com.turismo.plataforma.exception.AccesoDenegadoException;
 import com.turismo.plataforma.exception.ConflictoException;
 import com.turismo.plataforma.exception.RecursoNoEncontradoException;
 import com.turismo.plataforma.exception.SolicitudInvalidaException;
 import com.turismo.plataforma.model.*;
 import com.turismo.plataforma.model.catalogo.EstadoReserva;
+import com.turismo.plataforma.model.catalogo.EstadoTransaccion;
 import com.turismo.plataforma.model.catalogo.TipoIdentificacion;
 import com.turismo.plataforma.model.catalogo.TipoTrayecto;
 import com.turismo.plataforma.repository.*;
@@ -14,15 +16,23 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 /**
  * Reservas: el cliente elige salidas (de la búsqueda) y registra los pasajeros.
- * Cada pasajero viaja en todas las salidas de la reserva con el mismo asiento y plan.
+ * Cada pasajero viaja en todas las salidas de la reserva con el mismo plan; por cada salida se
+ * guarda un DetalleReserva con su asiento (ida y vuelta = dos detalles por pasajero).
  */
 @Service
 @Transactional(readOnly = true)
 public class ReservaService {
+
+    /** El cliente puede cancelar solo si faltan al menos estos días para el día del primer viaje. */
+    public static final int DIAS_MINIMOS_CANCELACION = 5;
+
+    private static final DateTimeFormatter FECHA = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
     private final ReservaRepository reservaRepository;
     private final ClienteRepository clienteRepository;
@@ -73,32 +83,58 @@ public class ReservaService {
         Empleado empleado = request.idEmpleado() == null ? null : empleadoRepository.findById(request.idEmpleado())
                 .orElseThrow(() -> new SolicitudInvalidaException("No existe el empleado con id " + request.idEmpleado()));
         Oferta oferta = buscarOfertaVigente(request.idOferta());
+        if (oferta != null && reservaRepository.ofertasUsadasPorCliente(cliente.getIdUsuario())
+                .contains(oferta.getIdOferta())) {
+            throw new ConflictoException("El cliente ya usó la oferta '" + oferta.getTitulo()
+                    + "' en otra reserva; cada oferta se puede usar una sola vez");
+        }
         EstadoReserva pendiente = catalogoService.estadoReserva(EstadoReserva.PENDIENTE);
 
         validarPasajerosSinRepetir(request.pasajeros());
-        Viajes viajes = prepararViajes(request.viajes(), request.pasajeros());
-        List<String> asientos = asignarAsientos(request.pasajeros(), viajes);
-        List<DetalleReserva> detalles = prepararPasajeros(request.pasajeros(), asientos);
+        List<ViajePreparado> viajes = prepararViajes(request.viajes(), request.pasajeros());
 
         Reserva reserva = new Reserva();
         reserva.setCliente(cliente);
         reserva.setEmpleado(empleado);
         reserva.setOferta(oferta);
         reserva.setEstadoReserva(pendiente);
-        viajes.lista().forEach(reserva::agregarViaje);
-        detalles.forEach(reserva::agregarDetalle);
+        viajes.forEach(v -> reserva.agregarViaje(v.viaje()));
+        for (ViajePreparado viaje : viajes) {
+            List<String> asientos = asignarAsientos(request.pasajeros(), viaje);
+            prepararPasajeros(request.pasajeros(), asientos, viaje.viaje().getProgramacionViaje())
+                    .forEach(reserva::agregarDetalle);
+        }
         return ReservaResponse.from(reservaRepository.save(reserva));
     }
 
-    /** Solo se cancela una reserva PENDIENTE (sin pagar). Libera los asientos. */
+    /**
+     * El cliente cancela una de sus reservas (pendiente o pagada) si faltan 5 días o más para el
+     * día del primer viaje. Libera los asientos y la oferta; si estaba pagada, el pago queda REEMBOLSADA.
+     */
     @Transactional
-    public ReservaResponse cancelar(Long id) {
+    public ReservaResponse cancelar(Long id, Long idCliente) {
         Reserva reserva = buscarEntidad(id);
-        if (!reserva.tieneEstado(EstadoReserva.PENDIENTE)) {
-            throw new ConflictoException("Solo se pueden cancelar reservas PENDIENTES; esta está "
-                    + reserva.getEstadoReserva().getNombreEstadoReserva());
+        if (idCliente == null || !reserva.getCliente().getIdUsuario().equals(idCliente)) {
+            throw new AccesoDenegadoException("Solo el cliente dueño de la reserva puede cancelarla");
+        }
+        if (reserva.tieneEstado(EstadoReserva.CANCELADA)) {
+            throw new ConflictoException("La reserva #" + id + " ya está cancelada");
+        }
+        LocalDateTime primeraSalida = reserva.primeraSalida();
+        if (primeraSalida != null) {
+            long dias = ChronoUnit.DAYS.between(LocalDate.now(), primeraSalida.toLocalDate());
+            if (dias < DIAS_MINIMOS_CANCELACION) {
+                throw new ConflictoException("Solo se puede cancelar con " + DIAS_MINIMOS_CANCELACION
+                        + " días o más de anticipación. El viaje es el " + primeraSalida.format(FECHA)
+                        + (dias <= 0 ? " y ya no se puede cancelar." : " y faltan " + dias + (dias == 1 ? " día." : " días.")));
+            }
         }
         reserva.setEstadoReserva(catalogoService.estadoReserva(EstadoReserva.CANCELADA));
+        Transaccion transaccion = reserva.getTransaccion();
+        if (transaccion != null
+                && transaccion.getEstadoTransaccion().getNombreEstadoTransaccion().equals(EstadoTransaccion.APROBADA)) {
+            transaccion.setEstadoTransaccion(catalogoService.estadoTransaccion(EstadoTransaccion.REEMBOLSADA));
+        }
         return ReservaResponse.from(reserva);
     }
 
@@ -140,16 +176,14 @@ public class ReservaService {
         }
     }
 
-    /** Viajes de la reserva, asientos ya ocupados en cualquiera de sus salidas y la menor capacidad. */
-    private record Viajes(List<ReservaViaje> lista, Set<String> asientosOcupados, int capacidadMinima) {
+    /** Un viaje de la reserva con los asientos ya ocupados en esa salida y la capacidad del vehículo. */
+    private record ViajePreparado(ReservaViaje viaje, Set<String> asientosOcupados, int capacidad) {
     }
 
     /** Cada salida: existe, no ha partido, tiene cupo para todos y los asientos pedidos están libres. */
-    private Viajes prepararViajes(List<ViajeReservaRequest> solicitados, List<PasajeroRequest> pasajeros) {
+    private List<ViajePreparado> prepararViajes(List<ViajeReservaRequest> solicitados, List<PasajeroRequest> pasajeros) {
         Set<Long> vistos = new HashSet<>();
-        List<ReservaViaje> viajes = new ArrayList<>();
-        Set<String> ocupados = new HashSet<>();
-        int capacidadMinima = Integer.MAX_VALUE;
+        List<ViajePreparado> viajes = new ArrayList<>();
         for (ViajeReservaRequest solicitado : solicitados) {
             Long idProgramacion = solicitado.idProgramacionViaje();
             if (!vistos.add(idProgramacion)) {
@@ -169,31 +203,29 @@ public class ReservaService {
                 throw new ConflictoException("La salida " + idProgramacion + " solo tiene " + Math.max(0, disponibles)
                         + " asientos disponibles");
             }
-            List<String> ocupadosSalida = programacionViajeRepository.listarAsientosOcupados(idProgramacion);
+            Set<String> ocupadosSalida = new HashSet<>(programacionViajeRepository.listarAsientosOcupados(idProgramacion));
             for (PasajeroRequest pasajero : pasajeros) {
                 if (asiento(pasajero) != null && ocupadosSalida.contains(asiento(pasajero))) {
                     throw new ConflictoException("El asiento " + asiento(pasajero) + " ya está ocupado en la salida "
                             + idProgramacion);
                 }
             }
-            ocupados.addAll(ocupadosSalida);
-            capacidadMinima = Math.min(capacidadMinima, vehiculo.getCapacidad());
             TipoTrayecto tipoTrayecto = catalogoService.tipoTrayecto(solicitado.tipoTrayecto());
 
             ReservaViaje viaje = new ReservaViaje();
             viaje.setProgramacionViaje(programacion);
             viaje.setTipoTrayecto(tipoTrayecto);
-            viajes.add(viaje);
+            viajes.add(new ViajePreparado(viaje, ocupadosSalida, vehiculo.getCapacidad()));
         }
-        return new Viajes(viajes, ocupados, capacidadMinima);
+        return viajes;
     }
 
     /**
-     * Respeta el asiento que se pidió; a los pasajeros sin asiento les da el primer número libre
-     * (1, 2, 3... hasta la capacidad del vehículo) en todas las salidas de la reserva.
+     * Asientos de los pasajeros en una salida: respeta el asiento que se pidió y a los demás les da
+     * el primer número libre de esa salida (1, 2, 3... hasta la capacidad del vehículo).
      */
-    private static List<String> asignarAsientos(List<PasajeroRequest> pasajeros, Viajes viajes) {
-        Set<String> tomados = new HashSet<>(viajes.asientosOcupados());
+    private static List<String> asignarAsientos(List<PasajeroRequest> pasajeros, ViajePreparado viaje) {
+        Set<String> tomados = new HashSet<>(viaje.asientosOcupados());
         pasajeros.stream().map(ReservaService::asiento).filter(a -> a != null).forEach(tomados::add);
         List<String> asientos = new ArrayList<>();
         int siguiente = 1;
@@ -203,8 +235,9 @@ public class ReservaService {
                 while (tomados.contains(String.valueOf(siguiente))) {
                     siguiente++;
                 }
-                if (siguiente > viajes.capacidadMinima()) {
-                    throw new ConflictoException("No quedan asientos libres en todas las salidas de la reserva");
+                if (siguiente > viaje.capacidad()) {
+                    throw new ConflictoException("No quedan asientos libres en la salida "
+                            + viaje.viaje().getProgramacionViaje().getIdProgramacionViaje());
                 }
                 asiento = String.valueOf(siguiente);
                 tomados.add(asiento);
@@ -214,7 +247,8 @@ public class ReservaService {
         return asientos;
     }
 
-    private List<DetalleReserva> prepararPasajeros(List<PasajeroRequest> pasajeros, List<String> asientos) {
+    private List<DetalleReserva> prepararPasajeros(List<PasajeroRequest> pasajeros, List<String> asientos,
+                                                   ProgramacionViaje programacion) {
         Map<Long, Plan> planes = new HashMap<>();
         List<DetalleReserva> detalles = new ArrayList<>();
         for (int i = 0; i < pasajeros.size(); i++) {
@@ -232,6 +266,7 @@ public class ReservaService {
             detalle.setIdentificacion(pasajero.numeroIdentificacion().trim());
             detalle.setNumeroAsiento(asientos.get(i));
             detalle.setPlan(plan);
+            detalle.setProgramacionViaje(programacion);
             detalles.add(detalle);
         }
         return detalles;

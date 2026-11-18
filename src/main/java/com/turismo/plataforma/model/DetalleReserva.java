@@ -6,7 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-/** Un pasajero de la reserva. */
+/** Un pasajero en uno de los viajes de la reserva (ida y regreso = dos detalles por pasajero). */
 @Entity
 @Table(name = "DetalleReserva")
 @Getter @Setter @NoArgsConstructor
@@ -19,6 +19,11 @@ public class DetalleReserva {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "idReserva")
     private Reserva reserva;
+
+    /** Salida en la que viaja este pasajero (con su asiento). FK a ReservaViaje en la BD. */
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "idProgramacionViaje", nullable = false)
+    private ProgramacionViaje programacionViaje;
 
     @Embedded
     private NombreCompleto nombre = new NombreCompleto();

@@ -72,9 +72,9 @@ public class ClienteController {
         return reservaService.comprasDeCliente(id);
     }
 
-    /** Cupones disponibles: ofertas vigentes que le llegaron por notificación. */
-    @GetMapping("/{id}/cupones")
-    public List<CuponResponse> cupones(@PathVariable("id") Long id) {
+    /** Ofertas disponibles para el cliente: vigentes hoy y que todavía no ha usado en una reserva. */
+    @GetMapping({"/{id}/ofertas", "/{id}/cupones"})
+    public List<CuponResponse> ofertasDisponibles(@PathVariable("id") Long id) {
         return ofertaService.cuponesDeCliente(id);
     }
 

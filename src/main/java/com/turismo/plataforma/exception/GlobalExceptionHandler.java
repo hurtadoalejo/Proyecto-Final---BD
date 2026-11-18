@@ -54,6 +54,11 @@ public class GlobalExceptionHandler {
         return problema(HttpStatus.UNAUTHORIZED, "No autorizado", ex.getMessage());
     }
 
+    @ExceptionHandler(AccesoDenegadoException.class)
+    public ProblemDetail accesoDenegado(AccesoDenegadoException ex) {
+        return problema(HttpStatus.FORBIDDEN, "Acceso denegado", ex.getMessage());
+    }
+
     @ExceptionHandler(RecursoNoEncontradoException.class)
     public ProblemDetail noEncontrado(RecursoNoEncontradoException ex) {
         return problema(HttpStatus.NOT_FOUND, "No encontrado", ex.getMessage());

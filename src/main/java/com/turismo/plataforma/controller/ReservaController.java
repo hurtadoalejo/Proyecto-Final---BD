@@ -38,9 +38,11 @@ public class ReservaController {
         return ResponseEntity.created(URI.create("/api/reservas/" + creada.idReserva())).body(creada);
     }
 
+    /** El cliente cancela su reserva (?idCliente= su id). Solo si faltan 5 días o más para el viaje. */
     @PutMapping("/{id}/cancelar")
-    public ReservaResponse cancelar(@PathVariable("id") Long id) {
-        return reservaService.cancelar(id);
+    public ReservaResponse cancelar(@PathVariable("id") Long id,
+                                    @RequestParam(name = "idCliente", required = false) Long idCliente) {
+        return reservaService.cancelar(id, idCliente);
     }
 
     @DeleteMapping("/{id}")

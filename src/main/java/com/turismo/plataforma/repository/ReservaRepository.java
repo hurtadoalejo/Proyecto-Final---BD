@@ -21,6 +21,15 @@ public interface ReservaRepository extends JpaRepository<Reserva, Long> {
            """)
     List<Reserva> listar(@Param("idCliente") Long idCliente);
 
+    /** Ofertas que el cliente ya usó en reservas que no están canceladas (cada oferta se usa una vez). */
+    @Query("""
+           select distinct r.oferta.idOferta from Reserva r
+           where r.cliente.idUsuario = :idCliente
+             and r.oferta is not null
+             and r.estadoReserva.nombreEstadoReserva <> 'CANCELADA'
+           """)
+    List<Long> ofertasUsadasPorCliente(@Param("idCliente") Long idCliente);
+
     /** Reservas de un cliente (cualquier estado). */
     long countByClienteIdUsuario(Long idCliente);
 

@@ -17,7 +17,7 @@ INSERT INTO TipoIdentificacion (nombreIdentificacion) VALUES ('CC'), ('CE'), ('T
 INSERT INTO Cargo (nombreCargo) VALUES ('Administrador del sistema'), ('Asesor de ventas'), ('Agente de servicio al cliente'), ('Coordinador de operaciones');
 INSERT INTO EstadoNotificacion (nombreEstadoNotificacion) VALUES ('PENDIENTE'), ('ENVIADO'), ('FALLIDO');
 INSERT INTO EstadoReserva (nombreEstadoReserva) VALUES ('PENDIENTE'), ('CONFIRMADA'), ('CANCELADA');
-INSERT INTO EstadoTransaccion (nombreEstadoTransaccion) VALUES ('PENDIENTE'), ('APROBADA'), ('RECHAZADA');
+INSERT INTO EstadoTransaccion (nombreEstadoTransaccion) VALUES ('PENDIENTE'), ('APROBADA'), ('RECHAZADA'), ('REEMBOLSADA');
 INSERT INTO MetodoPago (nombreMetodoPago) VALUES ('TARJETA_CREDITO'), ('TARJETA_DEBITO'), ('PSE'), ('EFECTIVO');
 INSERT INTO TipoTransporte (nombreTipoTransporte) VALUES ('AVION'), ('BUS'), ('TREN');
 INSERT INTO TipoTrayecto (nombreTipoTrayecto) VALUES ('IDA'), ('VUELTA');
@@ -2217,10 +2217,16 @@ SELECT t.idReserva,
 FROM tmp_viaje t
 JOIN TipoTrayecto tr ON tr.nombreTipoTrayecto = t.trayecto;
 
-INSERT INTO DetalleReserva (idDetalle, idReserva, primerNombre, segundoNombre, primerApellido, segundoApellido,
-                            identificacion, numeroAsiento, idTipoIdentificacion, idPlan)
-SELECT t.idDetalle, t.idReserva, t.pn, t.sn, t.pa, t.sa, t.ident, t.asiento, ti.idTipoIdentificacion, p.idPlan
+-- Un detalle por pasajero y por viaje: en las reservas de ida y vuelta cada pasajero queda
+-- registrado dos veces (ida y regreso). idDetalle se numera 1, 2, 3... dentro de la reserva.
+INSERT INTO DetalleReserva (idDetalle, idReserva, idProgramacionViaje, primerNombre, segundoNombre,
+                            primerApellido, segundoApellido, identificacion, numeroAsiento,
+                            idTipoIdentificacion, idPlan)
+SELECT ROW_NUMBER() OVER (PARTITION BY t.idReserva ORDER BY rv.idTipoTrayecto, t.idDetalle),
+       t.idReserva, rv.idProgramacionViaje, t.pn, t.sn, t.pa, t.sa, t.ident, t.asiento,
+       ti.idTipoIdentificacion, p.idPlan
 FROM tmp_pasajero t
+JOIN ReservaViaje rv       ON rv.idReserva = t.idReserva
 JOIN TipoIdentificacion ti ON ti.nombreIdentificacion = t.tipoId
 JOIN Plan p                ON p.nombrePlan = t.plan;
 
