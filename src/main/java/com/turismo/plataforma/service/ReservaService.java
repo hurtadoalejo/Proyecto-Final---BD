@@ -99,12 +99,16 @@ public class ReservaService {
         reserva.setOferta(oferta);
         reserva.setEstadoReserva(pendiente);
         viajes.forEach(v -> reserva.agregarViaje(v.viaje()));
+        // Primero la reserva y sus viajes (ReservaViaje): cada DetalleReserva tiene una FK a
+        // ReservaViaje, y Hibernate no garantiza que inserte los viajes antes que los detalles.
+        Reserva guardada = reservaRepository.saveAndFlush(reserva);
         for (ViajePreparado viaje : viajes) {
             List<String> asientos = asignarAsientos(request.pasajeros(), viaje);
             prepararPasajeros(request.pasajeros(), asientos, viaje.viaje().getProgramacionViaje())
-                    .forEach(reserva::agregarDetalle);
+                    .forEach(guardada::agregarDetalle);
         }
-        return ReservaResponse.from(reservaRepository.save(reserva));
+        reservaRepository.flush();
+        return ReservaResponse.from(guardada);
     }
 
     /**

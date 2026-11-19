@@ -1,5 +1,7 @@
 package com.turismo.plataforma.exception;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -18,6 +20,8 @@ import java.util.Map;
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     /** 400: campos que no cumplen las validaciones (campo -> mensaje). */
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -71,7 +75,9 @@ public class GlobalExceptionHandler {
 
     /** 409: la base de datos rechazó la operación (llave foránea, valor único...). */
     @ExceptionHandler(DataIntegrityViolationException.class)
-    public ProblemDetail integridad() {
+    public ProblemDetail integridad(DataIntegrityViolationException ex) {
+        // En la consola del backend queda la restricción exacta que falló, para poder revisarla.
+        log.warn("Restricción de base de datos: {}", ex.getMostSpecificCause().getMessage());
         return problema(HttpStatus.CONFLICT, "Restricción de base de datos",
                 "No se puede completar: el registro está relacionado con otros datos o está duplicado.");
     }
