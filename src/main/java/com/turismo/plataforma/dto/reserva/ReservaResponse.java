@@ -9,8 +9,6 @@ import com.turismo.plataforma.model.Ruta;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * Reserva completa con sus viajes, pasajeros, valores calculados (atributos derivados)
@@ -39,18 +37,13 @@ public record ReservaResponse(Long idReserva, LocalDateTime fechaReserva, String
         }
     }
 
-    /** Un detalle: el pasajero en una de las salidas (idProgramacionViaje / tipoTrayecto) con su asiento. */
-    public record Pasajero(Long idDetalle, Long idProgramacionViaje, String tipoTrayecto,
-                           String tipoIdentificacion, String numeroIdentificacion,
+    public record Pasajero(Long idDetalle, String tipoIdentificacion, String numeroIdentificacion,
                            String nombreCompleto, String numeroAsiento, Long idPlan, String nombrePlan,
                            BigDecimal precioExtra) {
 
-        static Pasajero from(DetalleReserva detalle, Map<Long, String> trayectoPorSalida) {
-            Long idSalida = detalle.getProgramacionViaje().getIdProgramacionViaje();
+        static Pasajero from(DetalleReserva detalle) {
             return new Pasajero(
                     detalle.getId().getIdDetalle(),
-                    idSalida,
-                    trayectoPorSalida.get(idSalida),
                     detalle.getTipoIdentificacion().getNombreIdentificacion(),
                     detalle.getIdentificacion(),
                     detalle.getNombre().completo(),
@@ -62,9 +55,6 @@ public record ReservaResponse(Long idReserva, LocalDateTime fechaReserva, String
     }
 
     public static ReservaResponse from(Reserva reserva) {
-        Map<Long, String> trayectoPorSalida = reserva.getViajes().stream()
-                .collect(Collectors.toMap(v -> v.getProgramacionViaje().getIdProgramacionViaje(),
-                        v -> v.getTipoTrayecto().getNombreTipoTrayecto(), (a, b) -> a));
         return new ReservaResponse(
                 reserva.getIdReserva(),
                 reserva.getFechaReserva(),
@@ -76,7 +66,7 @@ public record ReservaResponse(Long idReserva, LocalDateTime fechaReserva, String
                 reserva.getOferta() == null ? null : reserva.getOferta().getIdOferta(),
                 reserva.getOferta() == null ? null : reserva.getOferta().getTitulo(),
                 reserva.getViajes().stream().map(Viaje::from).toList(),
-                reserva.getDetalles().stream().map(d -> Pasajero.from(d, trayectoPorSalida)).toList(),
+                reserva.getDetalles().stream().map(Pasajero::from).toList(),
                 reserva.calcularSubtotal(),
                 reserva.calcularDescuento(),
                 reserva.calcularValorTotal(),

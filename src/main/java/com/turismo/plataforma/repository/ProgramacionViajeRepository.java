@@ -82,7 +82,8 @@ public interface ProgramacionViajeRepository extends JpaRepository<ProgramacionV
     @Query("""
            select count(d) from DetalleReserva d
              join d.reserva r
-           where d.programacionViaje.idProgramacionViaje = :idProgramacion
+             join r.viajes rv
+           where rv.programacionViaje.idProgramacionViaje = :idProgramacion
              and r.estadoReserva.nombreEstadoReserva <> 'CANCELADA'
            """)
     long contarAsientosOcupados(@Param("idProgramacion") Long idProgramacion);
@@ -91,7 +92,8 @@ public interface ProgramacionViajeRepository extends JpaRepository<ProgramacionV
     @Query("""
            select upper(d.numeroAsiento) from DetalleReserva d
              join d.reserva r
-           where d.programacionViaje.idProgramacionViaje = :idProgramacion
+             join r.viajes rv
+           where rv.programacionViaje.idProgramacionViaje = :idProgramacion
              and r.estadoReserva.nombreEstadoReserva <> 'CANCELADA'
            """)
     List<String> listarAsientosOcupados(@Param("idProgramacion") Long idProgramacion);

@@ -2217,16 +2217,10 @@ SELECT t.idReserva,
 FROM tmp_viaje t
 JOIN TipoTrayecto tr ON tr.nombreTipoTrayecto = t.trayecto;
 
--- Un detalle por pasajero y por viaje: en las reservas de ida y vuelta cada pasajero queda
--- registrado dos veces (ida y regreso). idDetalle se numera 1, 2, 3... dentro de la reserva.
-INSERT INTO DetalleReserva (idDetalle, idReserva, idProgramacionViaje, primerNombre, segundoNombre,
-                            primerApellido, segundoApellido, identificacion, numeroAsiento,
-                            idTipoIdentificacion, idPlan)
-SELECT ROW_NUMBER() OVER (PARTITION BY t.idReserva ORDER BY rv.idTipoTrayecto, t.idDetalle),
-       t.idReserva, rv.idProgramacionViaje, t.pn, t.sn, t.pa, t.sa, t.ident, t.asiento,
-       ti.idTipoIdentificacion, p.idPlan
+INSERT INTO DetalleReserva (idDetalle, idReserva, primerNombre, segundoNombre, primerApellido, segundoApellido,
+                            identificacion, numeroAsiento, idTipoIdentificacion, idPlan)
+SELECT t.idDetalle, t.idReserva, t.pn, t.sn, t.pa, t.sa, t.ident, t.asiento, ti.idTipoIdentificacion, p.idPlan
 FROM tmp_pasajero t
-JOIN ReservaViaje rv       ON rv.idReserva = t.idReserva
 JOIN TipoIdentificacion ti ON ti.nombreIdentificacion = t.tipoId
 JOIN Plan p                ON p.nombrePlan = t.plan;
 

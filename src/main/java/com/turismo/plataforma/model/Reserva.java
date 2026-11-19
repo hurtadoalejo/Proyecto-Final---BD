@@ -10,9 +10,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 @Entity
 @Table(name = "Reserva")
@@ -49,7 +47,7 @@ public class Reserva {
     @OneToMany(mappedBy = "reserva", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ReservaViaje> viajes = new ArrayList<>();
 
-    /** Pasajeros por viaje (tabla DetalleReserva): un detalle por pasajero y por salida. */
+    /** Pasajeros (tabla DetalleReserva). */
     @OneToMany(mappedBy = "reserva", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("id.idDetalle ASC")
     private List<DetalleReserva> detalles = new ArrayList<>();
@@ -63,7 +61,7 @@ public class Reserva {
         viajes.add(viaje);
     }
 
-    /** Agrega un detalle; su idDetalle es su número dentro de la reserva (1, 2, 3...). */
+    /** Agrega un pasajero; su idDetalle es su número dentro de la reserva (1, 2, 3...). */
     public void agregarDetalle(DetalleReserva detalle) {
         detalle.setId(new DetalleReservaId((long) (detalles.size() + 1), null));
         detalle.setReserva(this);
@@ -74,19 +72,14 @@ public class Reserva {
         return estadoReserva.getNombreEstadoReserva().equals(nombreEstado);
     }
 
-    /**
-     * Cada pasajero paga el precio base de cada viaje en el que va (un detalle por viaje)
-     * más el extra de su plan una sola vez por reserva.
-     */
+    /** Cada pasajero paga el precio base de todos los viajes más el extra de su plan. */
     public BigDecimal calcularSubtotal() {
-        BigDecimal tarifas = detalles.stream()
-                .map(detalle -> detalle.getProgramacionViaje().getRuta().getPrecioBase())
+        BigDecimal tarifaViajes = viajes.stream()
+                .map(viaje -> viaje.getProgramacionViaje().getRuta().getPrecioBase())
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        Map<String, BigDecimal> planPorPasajero = new LinkedHashMap<>();
-        detalles.forEach(detalle -> planPorPasajero.putIfAbsent(detalle.getIdentificacion(),
-                detalle.getPlan().getPrecioExtra()));
-        BigDecimal planes = planPorPasajero.values().stream().reduce(BigDecimal.ZERO, BigDecimal::add);
-        return tarifas.add(planes);
+        return detalles.stream()
+                .map(detalle -> tarifaViajes.add(detalle.getPlan().getPrecioExtra()))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     /** Fecha y hora de la primera salida de la reserva (null si no tiene viajes). */

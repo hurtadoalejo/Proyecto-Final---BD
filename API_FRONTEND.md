@@ -201,7 +201,7 @@ Los ids de ejemplo de este documento pueden cambiar; tómalos siempre de estas l
 }
 ```
 
-Cada pasajero viaja en todos los viajes de la reserva con el mismo plan, y por **cada viaje** se guarda un `DetalleReserva` con su asiento: en una reserva de ida y vuelta cada pasajero queda registrado dos veces (ida y regreso). **`numeroAsiento` es opcional**: si va en `null`, el backend asigna en cada salida el primer número libre (1, 2, 3… hasta la capacidad del vehículo); si se envía (ej. `"12A"`), se usa en todas las salidas y responde 409 si ya está ocupado en alguna. El plan se cobra una vez por pasajero. Cuando la compra la hace un **empleado**, `idEmpleado` es el id del empleado y `idCliente` el del cliente al que le vende. `idEmpleado` (quien atiende) e `idOferta` son opcionales; la oferta debe estar vigente y el cliente no puede haberla usado en otra reserva no cancelada (responde 409); las que puede usar salen en `GET /api/clientes/{id}/ofertas`. Planes: `GET /api/planes`.
+Cada pasajero viaja en todos los viajes de la reserva con el mismo asiento y plan: un `DetalleReserva` por pasajero, y los viajes (ida y regreso) quedan en `ReservaViaje`. **`numeroAsiento` es opcional**: si va en `null`, el backend asigna el primer número libre (1, 2, 3… hasta la capacidad del vehículo) en todas las salidas de la reserva; si se envía (ej. `"12A"`), se respeta y responde 409 si ya está ocupado. Cuando la compra la hace un **empleado**, `idEmpleado` es el id del empleado y `idCliente` el del cliente al que le vende. `idEmpleado` (quien atiende) e `idOferta` son opcionales; la oferta debe estar vigente y el cliente no puede haberla usado en otra reserva no cancelada (responde 409); las que puede usar salen en `GET /api/clientes/{id}/ofertas`. Planes: `GET /api/planes`.
 
 **201 Created** – la reserva queda **PENDIENTE**:
 
@@ -216,8 +216,7 @@ Cada pasajero viaja en todos los viajes de la reserva con el mismo plan, y por *
       "fechaHoraLlegada": "2026-12-10T08:30:00", "precioBase": 520000.00 }
   ],
   "pasajeros": [
-    { "idDetalle": 1, "idProgramacionViaje": 1234, "tipoTrayecto": "IDA",
-      "tipoIdentificacion": "CC", "numeroIdentificacion": "1094912345", "nombreCompleto": "Juan Pérez",
+    { "idDetalle": 1, "tipoIdentificacion": "CC", "numeroIdentificacion": "1094912345", "nombreCompleto": "Juan Pérez",
       "numeroAsiento": "12A", "idPlan": 1, "nombrePlan": "Básico", "precioExtra": 0.00 }
   ],
   "subtotal": 560000.00, "descuento": 56000.00, "valorTotal": 504000.00,

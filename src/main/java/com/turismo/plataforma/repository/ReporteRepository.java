@@ -33,10 +33,11 @@ public class ReporteRepository {
                     SELECT pv.idRuta,
                            COUNT(DISTINCT r.idReserva) AS reservas,
                            COUNT(*)                    AS pasajeros
-                    FROM DetalleReserva dr
-                    JOIN ProgramacionViaje pv ON pv.idProgramacionViaje = dr.idProgramacionViaje
-                    JOIN Reserva r            ON r.idReserva = dr.idReserva
+                    FROM ReservaViaje rvj
+                    JOIN ProgramacionViaje pv ON pv.idProgramacionViaje = rvj.idProgramacionViaje
+                    JOIN Reserva r            ON r.idReserva = rvj.idReserva
                     JOIN EstadoReserva er     ON er.idEstadoReserva = r.idEstadoReserva
+                    JOIN DetalleReserva dr    ON dr.idReserva = r.idReserva
                     WHERE er.nombreEstadoReserva <> 'CANCELADA'
                     GROUP BY pv.idRuta
                 ) x ON x.idRuta = ru.idRuta

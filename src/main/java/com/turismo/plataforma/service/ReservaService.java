@@ -22,8 +22,7 @@ import java.util.*;
 
 /**
  * Reservas: el cliente elige salidas (de la búsqueda) y registra los pasajeros.
- * Cada pasajero viaja en todas las salidas de la reserva con el mismo plan; por cada salida se
- * guarda un DetalleReserva con su asiento (ida y vuelta = dos detalles por pasajero).
+ * Cada pasajero viaja en todas las salidas de la reserva con el mismo asiento y plan.
  */
 @Service
 @Transactional(readOnly = true)
@@ -91,24 +90,18 @@ public class ReservaService {
         EstadoReserva pendiente = catalogoService.estadoReserva(EstadoReserva.PENDIENTE);
 
         validarPasajerosSinRepetir(request.pasajeros());
-        List<ViajePreparado> viajes = prepararViajes(request.viajes(), request.pasajeros());
+        Viajes viajes = prepararViajes(request.viajes(), request.pasajeros());
+        List<String> asientos = asignarAsientos(request.pasajeros(), viajes);
+        List<DetalleReserva> detalles = prepararPasajeros(request.pasajeros(), asientos);
 
         Reserva reserva = new Reserva();
         reserva.setCliente(cliente);
         reserva.setEmpleado(empleado);
         reserva.setOferta(oferta);
         reserva.setEstadoReserva(pendiente);
-        viajes.forEach(v -> reserva.agregarViaje(v.viaje()));
-        // Primero la reserva y sus viajes (ReservaViaje): cada DetalleReserva tiene una FK a
-        // ReservaViaje, y Hibernate no garantiza que inserte los viajes antes que los detalles.
-        Reserva guardada = reservaRepository.saveAndFlush(reserva);
-        for (ViajePreparado viaje : viajes) {
-            List<String> asientos = asignarAsientos(request.pasajeros(), viaje);
-            prepararPasajeros(request.pasajeros(), asientos, viaje.viaje().getProgramacionViaje())
-                    .forEach(guardada::agregarDetalle);
-        }
-        reservaRepository.flush();
-        return ReservaResponse.from(guardada);
+        viajes.lista().forEach(reserva::agregarViaje);
+        detalles.forEach(reserva::agregarDetalle);
+        return ReservaResponse.from(reservaRepository.save(reserva));
     }
 
     /**
@@ -180,14 +173,16 @@ public class ReservaService {
         }
     }
 
-    /** Un viaje de la reserva con los asientos ya ocupados en esa salida y la capacidad del vehículo. */
-    private record ViajePreparado(ReservaViaje viaje, Set<String> asientosOcupados, int capacidad) {
+    /** Viajes de la reserva, asientos ya ocupados en cualquiera de sus salidas y la menor capacidad. */
+    private record Viajes(List<ReservaViaje> lista, Set<String> asientosOcupados, int capacidadMinima) {
     }
 
     /** Cada salida: existe, no ha partido, tiene cupo para todos y los asientos pedidos están libres. */
-    private List<ViajePreparado> prepararViajes(List<ViajeReservaRequest> solicitados, List<PasajeroRequest> pasajeros) {
+    private Viajes prepararViajes(List<ViajeReservaRequest> solicitados, List<PasajeroRequest> pasajeros) {
         Set<Long> vistos = new HashSet<>();
-        List<ViajePreparado> viajes = new ArrayList<>();
+        List<ReservaViaje> viajes = new ArrayList<>();
+        Set<String> ocupados = new HashSet<>();
+        int capacidadMinima = Integer.MAX_VALUE;
         for (ViajeReservaRequest solicitado : solicitados) {
             Long idProgramacion = solicitado.idProgramacionViaje();
             if (!vistos.add(idProgramacion)) {
@@ -207,29 +202,31 @@ public class ReservaService {
                 throw new ConflictoException("La salida " + idProgramacion + " solo tiene " + Math.max(0, disponibles)
                         + " asientos disponibles");
             }
-            Set<String> ocupadosSalida = new HashSet<>(programacionViajeRepository.listarAsientosOcupados(idProgramacion));
+            List<String> ocupadosSalida = programacionViajeRepository.listarAsientosOcupados(idProgramacion);
             for (PasajeroRequest pasajero : pasajeros) {
                 if (asiento(pasajero) != null && ocupadosSalida.contains(asiento(pasajero))) {
                     throw new ConflictoException("El asiento " + asiento(pasajero) + " ya está ocupado en la salida "
                             + idProgramacion);
                 }
             }
+            ocupados.addAll(ocupadosSalida);
+            capacidadMinima = Math.min(capacidadMinima, vehiculo.getCapacidad());
             TipoTrayecto tipoTrayecto = catalogoService.tipoTrayecto(solicitado.tipoTrayecto());
 
             ReservaViaje viaje = new ReservaViaje();
             viaje.setProgramacionViaje(programacion);
             viaje.setTipoTrayecto(tipoTrayecto);
-            viajes.add(new ViajePreparado(viaje, ocupadosSalida, vehiculo.getCapacidad()));
+            viajes.add(viaje);
         }
-        return viajes;
+        return new Viajes(viajes, ocupados, capacidadMinima);
     }
 
     /**
-     * Asientos de los pasajeros en una salida: respeta el asiento que se pidió y a los demás les da
-     * el primer número libre de esa salida (1, 2, 3... hasta la capacidad del vehículo).
+     * Respeta el asiento que se pidió; a los pasajeros sin asiento les da el primer número libre
+     * (1, 2, 3... hasta la capacidad del vehículo) en todas las salidas de la reserva.
      */
-    private static List<String> asignarAsientos(List<PasajeroRequest> pasajeros, ViajePreparado viaje) {
-        Set<String> tomados = new HashSet<>(viaje.asientosOcupados());
+    private static List<String> asignarAsientos(List<PasajeroRequest> pasajeros, Viajes viajes) {
+        Set<String> tomados = new HashSet<>(viajes.asientosOcupados());
         pasajeros.stream().map(ReservaService::asiento).filter(a -> a != null).forEach(tomados::add);
         List<String> asientos = new ArrayList<>();
         int siguiente = 1;
@@ -239,9 +236,8 @@ public class ReservaService {
                 while (tomados.contains(String.valueOf(siguiente))) {
                     siguiente++;
                 }
-                if (siguiente > viaje.capacidad()) {
-                    throw new ConflictoException("No quedan asientos libres en la salida "
-                            + viaje.viaje().getProgramacionViaje().getIdProgramacionViaje());
+                if (siguiente > viajes.capacidadMinima()) {
+                    throw new ConflictoException("No quedan asientos libres en todas las salidas de la reserva");
                 }
                 asiento = String.valueOf(siguiente);
                 tomados.add(asiento);
@@ -251,8 +247,7 @@ public class ReservaService {
         return asientos;
     }
 
-    private List<DetalleReserva> prepararPasajeros(List<PasajeroRequest> pasajeros, List<String> asientos,
-                                                   ProgramacionViaje programacion) {
+    private List<DetalleReserva> prepararPasajeros(List<PasajeroRequest> pasajeros, List<String> asientos) {
         Map<Long, Plan> planes = new HashMap<>();
         List<DetalleReserva> detalles = new ArrayList<>();
         for (int i = 0; i < pasajeros.size(); i++) {
@@ -270,7 +265,6 @@ public class ReservaService {
             detalle.setIdentificacion(pasajero.numeroIdentificacion().trim());
             detalle.setNumeroAsiento(asientos.get(i));
             detalle.setPlan(plan);
-            detalle.setProgramacionViaje(programacion);
             detalles.add(detalle);
         }
         return detalles;
