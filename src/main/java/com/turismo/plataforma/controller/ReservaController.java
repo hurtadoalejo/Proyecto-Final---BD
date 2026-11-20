@@ -1,5 +1,7 @@
 package com.turismo.plataforma.controller;
 
+import com.turismo.plataforma.dto.reserva.AlternativaFechaResponse;
+import com.turismo.plataforma.dto.reserva.CambioFechaRequest;
 import com.turismo.plataforma.dto.reserva.ReservaRequest;
 import com.turismo.plataforma.dto.reserva.ReservaResponse;
 import com.turismo.plataforma.dto.reserva.ReservaResumenResponse;
@@ -43,6 +45,26 @@ public class ReservaController {
     public ReservaResponse cancelar(@PathVariable("id") Long id,
                                     @RequestParam(name = "idCliente", required = false) Long idCliente) {
         return reservaService.cancelar(id, idCliente);
+    }
+
+    /** Otras salidas de la misma ruta a las que el cliente puede mover este viaje de su reserva. */
+    @GetMapping("/{id}/viajes/{idProgramacionViaje}/alternativas")
+    public List<AlternativaFechaResponse> alternativasDeFecha(@PathVariable("id") Long id,
+                                                             @PathVariable("idProgramacionViaje") Long idProgramacionViaje,
+                                                             @RequestParam(name = "idCliente", required = false) Long idCliente) {
+        return reservaService.alternativasDeFecha(id, idProgramacionViaje, idCliente);
+    }
+
+    /**
+     * El cliente cambia la fecha de un viaje de su reserva (?idCliente= su id): la fila de
+     * ReservaViaje pasa a apuntar a otra salida de la misma ruta. Solo con 5 días o más de anticipación.
+     */
+    @PutMapping("/{id}/viajes/{idProgramacionViaje}")
+    public ReservaResponse cambiarFecha(@PathVariable("id") Long id,
+                                        @PathVariable("idProgramacionViaje") Long idProgramacionViaje,
+                                        @RequestParam(name = "idCliente", required = false) Long idCliente,
+                                        @Valid @RequestBody CambioFechaRequest request) {
+        return reservaService.cambiarFecha(id, idProgramacionViaje, request.idProgramacionViajeNuevo(), idCliente);
     }
 
     @DeleteMapping("/{id}")

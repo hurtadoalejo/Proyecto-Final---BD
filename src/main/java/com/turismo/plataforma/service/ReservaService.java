@@ -39,18 +39,20 @@ public class ReservaService {
     private final OfertaRepository ofertaRepository;
     private final PlanRepository planRepository;
     private final ProgramacionViajeRepository programacionViajeRepository;
+    private final ReservaViajeRepository reservaViajeRepository;
     private final CatalogoService catalogoService;
 
     public ReservaService(ReservaRepository reservaRepository, ClienteRepository clienteRepository,
                           EmpleadoRepository empleadoRepository, OfertaRepository ofertaRepository,
                           PlanRepository planRepository, ProgramacionViajeRepository programacionViajeRepository,
-                          CatalogoService catalogoService) {
+                          ReservaViajeRepository reservaViajeRepository, CatalogoService catalogoService) {
         this.reservaRepository = reservaRepository;
         this.clienteRepository = clienteRepository;
         this.empleadoRepository = empleadoRepository;
         this.ofertaRepository = ofertaRepository;
         this.planRepository = planRepository;
         this.programacionViajeRepository = programacionViajeRepository;
+        this.reservaViajeRepository = reservaViajeRepository;
         this.catalogoService = catalogoService;
     }
 
@@ -144,6 +146,192 @@ public class ReservaService {
         }
         reservaRepository.delete(reserva);
         reservaRepository.flush();
+    }
+
+    // ------------------------------------------------------------------ cambio de fecha
+
+    /**
+     * Salidas de la misma ruta a las que el cliente puede mover un viaje de su reserva: futuras,
+     * con cupo para todos sus pasajeros y que respetan el orden ida/regreso.
+     */
+    @Transactional(readOnly = true)
+    public List<AlternativaFechaResponse> alternativasDeFecha(Long idReserva, Long idProgramacionActual, Long idCliente) {
+        Reserva reserva = buscarEntidad(idReserva);
+        ReservaViaje viaje = validarCambioPermitido(reserva, idProgramacionActual, idCliente);
+        ProgramacionViaje actual = viaje.getProgramacionViaje();
+        Ventana ventana = ventana(reserva, viaje);
+        LocalDateTime desde = LocalDateTime.now();
+        LocalDateTime hasta = ventana.hasta() != null ? ventana.hasta().plusSeconds(1) : desde.plusYears(1);
+        Set<Long> salidasDeLaReserva = new HashSet<>();
+        reserva.getViajes().forEach(v -> salidasDeLaReserva.add(v.getProgramacionViaje().getIdProgramacionViaje()));
+        int pasajeros = reserva.getDetalles().size();
+        int capacidad = actual.getRuta().getVehiculo().getCapacidad();
+
+        return programacionViajeRepository.listar(actual.getRuta().getIdRuta(), desde, hasta).stream()
+                .filter(p -> !salidasDeLaReserva.contains(p.getIdProgramacionViaje()))
+                .filter(p -> ventana.permite(p.getFechaHoraSalida()))
+                .map(p -> new AlternativaFechaResponse(p.getIdProgramacionViaje(), p.getFechaHoraSalida(),
+                        p.calcularLlegada(),
+                        capacidad - programacionViajeRepository.contarAsientosOcupados(p.getIdProgramacionViaje())))
+                .filter(a -> a.asientosDisponibles() >= pasajeros)
+                .toList();
+    }
+
+    /**
+     * El cliente mueve un viaje de su reserva a otra salida de la misma ruta (solo cambia la fecha:
+     * mismo trayecto, mismo precio, mismos pasajeros, plan y oferta). Solo si faltan 5 días o más
+     * para la salida actual. La fila de ReservaViaje queda apuntando a la nueva salida; si el asiento
+     * de un pasajero ya está ocupado allí, se le asigna el primer número libre en todos sus viajes.
+     */
+    @Transactional
+    public ReservaResponse cambiarFecha(Long idReserva, Long idProgramacionActual, Long idProgramacionNueva,
+                                        Long idCliente) {
+        Reserva reserva = buscarEntidad(idReserva);
+        ReservaViaje viaje = validarCambioPermitido(reserva, idProgramacionActual, idCliente);
+        ProgramacionViaje actual = viaje.getProgramacionViaje();
+        if (idProgramacionNueva.equals(idProgramacionActual)) {
+            throw new SolicitudInvalidaException("La nueva salida es la misma que ya tienes");
+        }
+        ProgramacionViaje nueva = programacionViajeRepository.findById(idProgramacionNueva)
+                .orElseThrow(() -> new SolicitudInvalidaException("No existe la salida con id " + idProgramacionNueva));
+        if (!nueva.getRuta().getIdRuta().equals(actual.getRuta().getIdRuta())) {
+            throw new SolicitudInvalidaException("Solo se puede cambiar la fecha: la nueva salida debe ser de la misma "
+                    + "ruta (" + actual.getRuta().getCiudadOrigen().getNombreCiudad() + " → "
+                    + actual.getRuta().getCiudadDestino().getNombreCiudad() + ")");
+        }
+        if (!nueva.getFechaHoraSalida().isAfter(LocalDateTime.now())) {
+            throw new SolicitudInvalidaException("La salida elegida ya partió");
+        }
+        boolean yaEnLaReserva = reserva.getViajes().stream()
+                .anyMatch(v -> v.getProgramacionViaje().getIdProgramacionViaje().equals(idProgramacionNueva));
+        if (yaEnLaReserva) {
+            throw new ConflictoException("Esa salida ya hace parte de la reserva");
+        }
+        Ventana ventana = ventana(reserva, viaje);
+        if (!ventana.permite(nueva.getFechaHoraSalida())) {
+            throw new ConflictoException(ventana.mensaje());
+        }
+        int pasajeros = reserva.getDetalles().size();
+        long disponibles = nueva.getRuta().getVehiculo().getCapacidad()
+                - programacionViajeRepository.contarAsientosOcupados(idProgramacionNueva);
+        if (disponibles < pasajeros) {
+            throw new ConflictoException("La salida del " + nueva.getFechaHoraSalida().format(FECHA) + " solo tiene "
+                    + Math.max(0, disponibles) + " asientos disponibles y la reserva tiene " + pasajeros + " pasajeros");
+        }
+
+        reasignarAsientosOcupados(reserva, viaje, nueva);
+        reservaViajeRepository.cambiarSalida(idReserva, idProgramacionActual, idProgramacionNueva);
+        return ReservaResponse.from(buscarEntidad(idReserva));
+    }
+
+    /** Reglas comunes: dueño, reserva activa, el viaje es de la reserva y faltan 5 días o más para él. */
+    private ReservaViaje validarCambioPermitido(Reserva reserva, Long idProgramacionActual, Long idCliente) {
+        if (idCliente == null || !reserva.getCliente().getIdUsuario().equals(idCliente)) {
+            throw new AccesoDenegadoException("Solo el cliente dueño de la reserva puede cambiar sus fechas");
+        }
+        if (reserva.tieneEstado(EstadoReserva.CANCELADA)) {
+            throw new ConflictoException("La reserva #" + reserva.getIdReserva() + " está cancelada");
+        }
+        ReservaViaje viaje = reserva.getViajes().stream()
+                .filter(v -> v.getProgramacionViaje().getIdProgramacionViaje().equals(idProgramacionActual))
+                .findFirst()
+                .orElseThrow(() -> new RecursoNoEncontradoException("La salida " + idProgramacionActual
+                        + " no hace parte de la reserva #" + reserva.getIdReserva()));
+        LocalDateTime salida = viaje.getProgramacionViaje().getFechaHoraSalida();
+        long dias = ChronoUnit.DAYS.between(LocalDate.now(), salida.toLocalDate());
+        if (dias < DIAS_MINIMOS_CANCELACION) {
+            throw new ConflictoException("Solo se puede cambiar la fecha con " + DIAS_MINIMOS_CANCELACION
+                    + " días o más de anticipación. Este viaje sale el " + salida.format(FECHA)
+                    + (dias <= 0 ? " y ya no se puede cambiar." : " y faltan " + dias + (dias == 1 ? " día." : " días.")));
+        }
+        return viaje;
+    }
+
+    /**
+     * Rango permitido para la nueva salida según los otros viajes de la reserva: la ida debe llegar
+     * antes de que salga el regreso, y el regreso debe salir después de que llegue la ida.
+     */
+    private record Ventana(LocalDateTime desde, LocalDateTime hasta, String mensaje) {
+        boolean permite(LocalDateTime salida) {
+            return (desde == null || !salida.isBefore(desde)) && (hasta == null || !salida.isAfter(hasta));
+        }
+    }
+
+    private Ventana ventana(Reserva reserva, ReservaViaje viaje) {
+        ProgramacionViaje actual = viaje.getProgramacionViaje();
+        int duracion = actual.getRuta().getDuracionEstimada();
+        LocalDateTime desde = null;
+        LocalDateTime hasta = null;
+        String mensaje = null;
+        for (ReservaViaje otro : reserva.getViajes()) {
+            ProgramacionViaje p = otro.getProgramacionViaje();
+            if (p.getIdProgramacionViaje().equals(actual.getIdProgramacionViaje())) {
+                continue;
+            }
+            if (p.getFechaHoraSalida().isAfter(actual.getFechaHoraSalida())) {
+                LocalDateTime limite = p.getFechaHoraSalida().minusMinutes(duracion);
+                if (hasta == null || limite.isBefore(hasta)) {
+                    hasta = limite;
+                    mensaje = "La ida debe llegar antes de que salga el regreso (" + p.getFechaHoraSalida().format(FECHA)
+                            + "). Elige una fecha anterior o cambia primero el regreso.";
+                }
+            } else {
+                LocalDateTime limite = p.calcularLlegada();
+                if (desde == null || limite.isAfter(desde)) {
+                    desde = limite;
+                    mensaje = "El regreso debe salir después de que llegue la ida (" + limite.format(FECHA)
+                            + "). Elige una fecha posterior o cambia primero la ida.";
+                }
+            }
+        }
+        return new Ventana(desde, hasta, mensaje);
+    }
+
+    /**
+     * Cada pasajero conserva su número de asiento (es el mismo en todos los viajes). Si en la nueva
+     * salida ese número ya está ocupado, recibe el primer número libre en la nueva salida y en los
+     * demás viajes de la reserva.
+     */
+    private void reasignarAsientosOcupados(Reserva reserva, ReservaViaje viaje, ProgramacionViaje nueva) {
+        Set<String> ocupadosNueva = new HashSet<>(
+                programacionViajeRepository.listarAsientosOcupados(nueva.getIdProgramacionViaje()));
+        List<DetalleReserva> aMover = reserva.getDetalles().stream()
+                .filter(d -> ocupadosNueva.contains(d.getNumeroAsiento().toUpperCase()))
+                .toList();
+        if (aMover.isEmpty()) {
+            return;
+        }
+        Set<String> propios = new HashSet<>();
+        reserva.getDetalles().forEach(d -> propios.add(d.getNumeroAsiento().toUpperCase()));
+
+        Set<String> tomados = new HashSet<>(ocupadosNueva);
+        int capacidad = nueva.getRuta().getVehiculo().getCapacidad();
+        for (ReservaViaje otro : reserva.getViajes()) {
+            if (otro == viaje) {
+                continue;
+            }
+            Long idOtra = otro.getProgramacionViaje().getIdProgramacionViaje();
+            programacionViajeRepository.listarAsientosOcupados(idOtra).stream()
+                    .filter(a -> !propios.contains(a))
+                    .forEach(tomados::add);
+            capacidad = Math.min(capacidad, otro.getProgramacionViaje().getRuta().getVehiculo().getCapacidad());
+        }
+        reserva.getDetalles().stream()
+                .filter(d -> !aMover.contains(d))
+                .forEach(d -> tomados.add(d.getNumeroAsiento().toUpperCase()));
+
+        int siguiente = 1;
+        for (DetalleReserva detalle : aMover) {
+            while (tomados.contains(String.valueOf(siguiente))) {
+                siguiente++;
+            }
+            if (siguiente > capacidad) {
+                throw new ConflictoException("No hay un asiento libre a la vez en la nueva salida y en el otro viaje "
+                        + "de la reserva; elige otra fecha");
+            }
+            detalle.setNumeroAsiento(String.valueOf(siguiente));
+            tomados.add(String.valueOf(siguiente));
+        }
     }
 
     private Oferta buscarOfertaVigente(Long idOferta) {
